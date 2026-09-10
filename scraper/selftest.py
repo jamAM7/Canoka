@@ -401,6 +401,29 @@ def main() -> int:
     ok &= check("a long reading is pointed at, not inlined",
                 "files/s/2_reading.md" in pointed and "xxxx" not in pointed)
 
+    print("\ncross-platform install")
+    import scrape
+    ok &= check("a real timezone loads",
+                str(scrape.load_timezone("Australia/Sydney")) == "Australia/Sydney")
+    try:
+        scrape.load_timezone("Not/AZone")
+    except SystemExit as exc:
+        message = str(exc)
+    else:
+        message = ""
+    ok &= check("a missing timezone database names the fix, not the key",
+                "pip install tzdata" in message)
+
+    reqs = [line.split("#")[0].strip()
+            for line in (Path(__file__).parent / "requirements.txt").read_text().splitlines()]
+    reqs = [line for line in reqs if line]
+    ok &= check("tzdata is pulled in on Windows only",
+                any(r.startswith("tzdata") and 'sys_platform == "win32"' in r for r in reqs))
+    ok &= check("the macOS-only OCR deps are marked, not commented out",
+                len([r for r in reqs if r.startswith("pyobjc-")]) == 2
+                and all('sys_platform == "darwin"' in r
+                        for r in reqs if r.startswith("pyobjc-")))
+
     print("\n" + ("All checks passed." if ok else "Some checks FAILED."))
     return 0 if ok else 1
 

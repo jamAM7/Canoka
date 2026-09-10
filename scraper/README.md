@@ -267,3 +267,34 @@ python selftest.py
 
 Runs the HTML conversion, weight computation and a full subject build against a
 mock Canvas. No network, no token needed.
+
+
+
+
+
+## Windows
+
+`pip install -r requirements.txt` works unedited. The two platform differences
+are handled by environment markers in that file rather than by commenting lines
+out first:
+
+- **`tzdata` installs on Windows only.** Windows ships no system timezone
+  database, so `zoneinfo` has nothing to read and every `--timezone` lookup
+  raises. macOS and Linux already carry one.
+- **The two `pyobjc-framework-*` lines install on macOS only.** They back
+  `--ocr`, which uses the macOS Vision framework. Elsewhere pip skips them
+  instead of failing on them, and `--ocr` reports the missing library rather
+  than crashing.
+
+If you installed piecemeal and hit a timezone error anyway, the scraper names
+the fix instead of raising a bare key error:
+
+```
+No timezone data for 'Australia/Sydney'. On Windows this usually means the
+timezone database is missing: pip install tzdata
+```
+
+One caveat that is not Windows-specific: `pymupdf4llm` is a large install,
+roughly 220 MB once onnxruntime and numpy come with it. Drop it from
+requirements if that matters; `--extract` falls back to `pypdf` and says so on
+each file.

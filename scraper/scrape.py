@@ -22,7 +22,7 @@ import sys
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from canvas import CanvasClient, CanvasError, SubjectBuilder, subject_code
 from canvas.build import clean_name, slugify
@@ -41,6 +41,24 @@ def load_env(path: Path) -> None:
             continue
         key, _, value = line.partition("=")
         os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+
+
+def load_timezone(name: str) -> ZoneInfo:
+    """The timezone, or an error that names the cause instead of the key.
+
+    Windows ships no system timezone database, so zoneinfo has nothing to read
+    and every key raises. requirements.txt pulls `tzdata` in there via an
+    environment marker, but a piecemeal install lands on a bare
+    ZoneInfoNotFoundError that says only "no time zone found" — which reads as
+    a typo in --timezone rather than a missing package.
+    """
+    try:
+        return ZoneInfo(name)
+    except ZoneInfoNotFoundError as exc:
+        raise SystemExit(
+            f"No timezone data for {name!r}. On Windows this usually means the "
+            "timezone database is missing: pip install tzdata"
+        ) from exc
 
 
 def parse_args() -> argparse.Namespace:
@@ -299,7 +317,7 @@ def main() -> int:
     download = args.download or args.extract
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
-    tz = ZoneInfo(args.timezone)
+    tz = load_timezone(args.timezone)
     selection = None
 
     client = CanvasClient(base_url, token, cache_dir=args.cache,

@@ -30,10 +30,20 @@ python3 -m venv .venv
 cp scraper/.env.example scraper/.env    # add CANVAS_BASE_URL and CANVAS_API_TOKEN
 
 cd scraper
-../.venv/bin/python scrape.py                      # JSON + markdown views
+../.venv/bin/python scrape.py                       # JSON + markdown views
 ../.venv/bin/python scrape.py --download --extract  # also convert attachments
 ../.venv/bin/python selftest.py                     # no network, no token needed
 ```
+
+On Windows the venv puts things elsewhere, but nothing else changes:
+
+```
+py -m venv .venv
+.venv\Scripts\pip install -r scraper\requirements.txt
+```
+
+The requirements file installs correctly on every platform without editing.
+See [scraper/README.md](scraper/README.md) for why.
 
 Get a token from Canvas under Account, then Settings, then New Access Token.
 
