@@ -26,6 +26,7 @@ from zoneinfo import ZoneInfo
 
 from canvas import CanvasClient, CanvasError, SubjectBuilder, subject_code
 from canvas.build import clean_name, slugify
+from canvas.render import module_slices, render_subject
 
 HERE = Path(__file__).resolve().parent
 
@@ -69,6 +70,10 @@ def parse_args() -> argparse.Namespace:
                         help="only these subject codes or course IDs")
     parser.add_argument("--timezone", default="Australia/Sydney")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--pretty", action="store_true",
+                        help="indent the JSON for reading; costs ~8%% in tokens")
+    parser.add_argument("--no-render", action="store_true",
+                        help="skip the markdown views, write only JSON")
     return parser.parse_args()
 
 
@@ -238,6 +243,41 @@ def list_courses(client: CanvasClient, include_concluded: bool) -> list[dict]:
     return [c for c in courses if c.get("id") and not c.get("access_restricted_by_date")]
 
 
+def dump(payload, pretty: bool) -> str:
+    """Serialise a document for `out/`.
+
+    Compact by default. These files are read by a model far more often than by
+    a person, and two spaces per nesting level is ~8% of a subject with nothing
+    gained — the content is markdown inside the strings either way. `--pretty`
+    is there for when you are the one reading.
+    """
+    if pretty:
+        return json.dumps(payload, indent=2, ensure_ascii=False)
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+
+
+def write_views(out_dir: Path, filename: str, document: dict, skip: bool) -> list[str]:
+    """Write the markdown views beside a subject's JSON, newest run wins.
+
+    Stale slices from an earlier run are cleared first: a module renamed or
+    emptied between runs would otherwise leave a file behind that still reads
+    like current course content.
+    """
+    stem = filename[:-len(".json")]
+    for old in sorted(out_dir.glob(f"{stem}.*.md")) + [out_dir / f"{stem}.md"]:
+        old.unlink(missing_ok=True)
+    if skip:
+        return []
+
+    written = [f"{stem}.md"]
+    (out_dir / written[0]).write_text(render_subject(document), encoding="utf-8")
+    for slug, markdown in module_slices(document):
+        name = f"{stem}.{slug}.md"
+        (out_dir / name).write_text(markdown, encoding="utf-8")
+        written.append(name)
+    return written
+
+
 def wanted(course: dict, filters: list[str] | None) -> bool:
     if not filters:
         return True
@@ -347,9 +387,7 @@ def main() -> int:
               f"{' …' if len(stats['titles']) > 4 else ''})\n")
 
     for filename, document in built:
-        (out_dir / filename).write_text(
-            json.dumps(document, indent=2, ensure_ascii=False), encoding="utf-8"
-        )
+        (out_dir / filename).write_text(dump(document, args.pretty), encoding="utf-8")
         gaps = [k for k, v in document["_meta"]["coverage"].items() if v["status"] != "ok"]
         print(f"{document['subject']['code'] or '?'}: "
               f"{len(document['assessments'])} assessments, "
@@ -359,19 +397,28 @@ def main() -> int:
         if gaps:
             print(f"    not retrieved: {', '.join(gaps)}")
 
+        # The JSON is what code queries; these are what goes in a prompt. A
+        # whole subject is tens of thousands of tokens, one module is a few
+        # thousand, and the module is usually the question being asked.
+        views = write_views(out_dir, filename, document, skip=args.no_render)
+        if views:
+            print(f"    {len(views)} markdown view(s): {views[0]}"
+                  + (f" … +{len(views) - 1} more" if len(views) > 1 else ""))
+
         index.append({
             "code": document["subject"]["code"],
             "name": document["subject"]["name"],
             "session": document["subject"]["session"],
             "course_id": document["subject"]["course_id"],
             "file": filename,
+            "views": views,
             "assessment_count": len(document["assessments"]),
             "coverage_gaps": gaps,
         })
 
     (out_dir / "index.json").write_text(
-        json.dumps({"subjects": index, "canvas_host": base_url,
-                    "session_selection": selection}, indent=2, ensure_ascii=False),
+        dump({"subjects": index, "canvas_host": base_url,
+              "session_selection": selection}, pretty=True),
         encoding="utf-8",
     )
     print(f"Done. {client.request_count} API requests. Output in {out_dir}")

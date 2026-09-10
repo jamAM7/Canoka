@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from urllib.parse import urljoin, urlparse
+from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlsplit, urlunsplit
 
 from bs4 import BeautifulSoup
 
@@ -32,14 +32,39 @@ _URL_KIND_PATTERNS = [
 ]
 
 
+# Canvas appends a `verifier` to file links: a bearer token that downloads the
+# file with no auth at all. Stripping it keeps credentials out of the corpus,
+# and out of anything the corpus is later pasted into. `wrap` only asks Canvas
+# for its preview chrome, so it goes too. The canonical /files/<id> URL that
+# remains is what every consumer here already matches on.
+_DROP_PARAMS = {"verifier", "wrap"}
+
+_LINK_ATTRS = (("a", "href"), ("img", "src"), ("iframe", "src"), ("embed", "src"))
+
+
+def _clean_url(value: str) -> str:
+    split = urlsplit(value)
+    if not split.query:
+        return value
+    kept = [(k, v) for k, v in parse_qsl(split.query, keep_blank_values=True)
+            if k.lower() not in _DROP_PARAMS]
+    return urlunsplit(split._replace(query=urlencode(kept)))
+
+
 def _absolutise(soup: BeautifulSoup, base_url: str | None) -> None:
-    if not base_url:
-        return
-    for tag, attr in (("a", "href"), ("img", "src"), ("iframe", "src")):
+    """Make hrefs absolute and strip Canvas's file-access tokens out of them.
+
+    Runs before both the markdown conversion and the link extraction, so a
+    verifier can't survive in a page body either.
+    """
+    for tag, attr in _LINK_ATTRS:
         for node in soup.find_all(tag):
             value = node.get(attr)
-            if value and not value.startswith(("http://", "https://", "mailto:", "#")):
-                node[attr] = urljoin(base_url, value)
+            if not value:
+                continue
+            if base_url and not value.startswith(("http://", "https://", "mailto:", "#")):
+                value = urljoin(base_url, value)
+            node[attr] = _clean_url(value)
 
 
 def html_to_markdown(html: str | None, base_url: str | None = None) -> str:
@@ -113,7 +138,13 @@ def extract_links(html: str | None, base_url: str | None = None) -> list[dict]:
 
 # --------------------------------------------------------------- file -> text
 
-def _pdf_text(path: Path) -> str:
+def _pdf_flat_text(path: Path) -> str:
+    """The fallback: pypdf's plain text, page by page.
+
+    Keeps a PDF readable when pymupdf4llm isn't installed, but it is genuinely
+    a lesser result — a rubric comes back as a run of words with the column
+    boundaries gone.
+    """
     from pypdf import PdfReader
 
     reader = PdfReader(str(path))
@@ -123,6 +154,27 @@ def _pdf_text(path: Path) -> str:
         if body:
             pages.append(f"[page {number}]\n{body}")
     return "\n\n".join(pages)
+
+
+def _pdf_text(path: Path) -> tuple[str, str]:
+    """PDF -> markdown, keeping the headings and the tables.
+
+    pymupdf4llm infers heading levels from font size and emits real pipe
+    tables. That matters more for this format than any other here: assignment
+    briefs and marking criteria live in PDFs as tables, and flat extraction
+    turns a rubric into an unreadable run of words — the same failure that made
+    html_to_markdown preserve tables rather than flatten them.
+
+    Returns the text and which engine produced it, because the fallback changes
+    what the output *is*. Recording `pypdf` when markdown was expected is how
+    you find out a table went missing, instead of wondering why a rubric reads
+    like prose.
+    """
+    try:
+        import pymupdf4llm
+    except ImportError:
+        return _pdf_flat_text(path), "pypdf"
+    return pymupdf4llm.to_markdown(str(path), show_progress=False), "pymupdf4llm"
 
 
 def _pptx_text(path: Path) -> str:
@@ -179,7 +231,7 @@ def _plain_text(path: Path) -> str:
 
 
 _EXTRACTORS = {
-    ".pdf": ("pypdf", _pdf_text),
+    ".pdf": ("pymupdf4llm", _pdf_text),
     ".pptx": ("python-pptx", _pptx_text),
     ".docx": ("python-docx", _docx_text),
     ".xlsx": ("openpyxl", _xlsx_text),
@@ -272,7 +324,11 @@ def file_to_text(path: Path, ocr: bool = False) -> dict:
 
     library, extractor = _EXTRACTORS[suffix]
     try:
-        text = (extractor(path) or "").strip()
+        produced = extractor(path)
+        # PDFs pick their engine at call time and say which one ran; every
+        # other format has exactly one.
+        text, library = produced if isinstance(produced, tuple) else (produced, library)
+        text = (text or "").strip()
     except ImportError:
         return {
             "status": "missing_library",
