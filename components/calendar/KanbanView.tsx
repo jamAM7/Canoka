@@ -8,7 +8,7 @@ import {
   STATUS_ORDER,
   typeLabel,
 } from "@/lib/calendar/event-utils";
-import { colorClasses } from "@/lib/calendar/colors";
+import { courseTone } from "@/lib/calendar/colors";
 
 interface Props {
   events: CalendarEvent[];
@@ -33,10 +33,10 @@ export function KanbanView({
   );
 
   return (
-    <div className="cb-scroll flex h-full gap-4 overflow-x-auto bg-slate-50 p-4">
+    <div className="cb-scroll kanban kanban-4up" style={{ overflowX: "auto" }}>
       {STATUS_ORDER.map((status) => {
         const items = board
-          .filter((ev) => (ev.status ?? "todo") === status)
+          .filter((ev) => (ev.status ?? "coming_up") === status)
           .sort(
             (a, b) =>
               +new Date(a.dueDate ?? a.start) - +new Date(b.dueDate ?? b.start),
@@ -55,22 +55,14 @@ export function KanbanView({
               setDragId(null);
               setOverCol(null);
             }}
-            className={`flex w-72 shrink-0 flex-col rounded-xl border ${
-              overCol === status
-                ? "border-blue-400 bg-blue-50/50"
-                : "border-slate-200 bg-slate-100/60"
-            }`}
+            className={`kanban-column ${overCol === status ? "drag-over" : ""}`}
           >
-            <div className="flex items-center justify-between px-3 py-2.5">
-              <span className="text-sm font-semibold text-slate-700">
-                {STATUS_META[status].label}
-              </span>
-              <span className="grid h-5 min-w-5 place-items-center rounded-full bg-white px-1.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
-                {items.length}
-              </span>
+            <div className="kanban-column-header">
+              <span className="kanban-column-title">{STATUS_META[status].label}</span>
+              <span className="kanban-count">{items.length}</span>
             </div>
 
-            <div className="cb-scroll flex-1 space-y-2 overflow-y-auto px-2 pb-2">
+            <div className="cb-scroll kanban-list">
               {items.map((ev) => (
                 <KanbanCard
                   key={ev.id}
@@ -88,9 +80,7 @@ export function KanbanView({
                 />
               ))}
               {items.length === 0 && (
-                <p className="px-2 py-6 text-center text-xs text-slate-400">
-                  Drop tasks here
-                </p>
+                <p className="kanban-empty">Drop tasks here</p>
               )}
             </div>
           </div>
@@ -115,7 +105,7 @@ function KanbanCard({
   onDragEnd: () => void;
   onClick: () => void;
 }) {
-  const c = colorClasses(course?.color);
+  const tone = courseTone(course?.color);
   const due = event.dueDate ? new Date(event.dueDate) : null;
   const overdue = due && event.status !== "done" && isPast(due);
 
@@ -125,38 +115,32 @@ function KanbanCard({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
-      className={`cursor-grab rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing ${
-        dragging ? "opacity-40" : ""
-      }`}
+      className={`kanban-card ${dragging ? "dragging" : ""}`}
+      style={{ marginBottom: "var(--space-3)" }}
     >
-      <div className="mb-1.5 flex items-center gap-1.5">
+      <div className="kanban-card-tags">
         <span
-          className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ring-inset ${c.chip}`}
+          className="badge"
+          style={{ background: tone.bg, color: tone.fg, minHeight: 22, padding: "0 8px", fontSize: 10, textTransform: "uppercase" }}
         >
           {course?.code ?? typeLabel(event)}
         </span>
         {event.type === "assessment" && (
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+          <span className="text-xs text-light" style={{ fontWeight: 600, textTransform: "uppercase" }}>
             ◆ Assessment
           </span>
         )}
         {event.parentId && (
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+          <span className="text-xs text-light" style={{ fontWeight: 600, textTransform: "uppercase" }}>
             Subtask
           </span>
         )}
       </div>
 
-      <p className="text-sm font-medium leading-snug text-slate-800">
-        {event.title}
-      </p>
+      <p className="kanban-card-title" style={{ marginBottom: 0 }}>{event.title}</p>
 
       {due && (
-        <p
-          className={`mt-1.5 text-xs font-medium ${
-            overdue ? "text-rose-600" : "text-slate-500"
-          }`}
-        >
+        <p className={`kanban-card-due ${overdue ? "overdue" : ""}`}>
           {overdue ? "Overdue · " : "Due "}
           {format(due, "EEE d MMM, h:mm a")}
         </p>

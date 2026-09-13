@@ -10,7 +10,7 @@
 
 export type CalendarEventType = "class" | "assessment" | "task";
 
-export type TaskStatus = "todo" | "in_progress" | "done";
+export type TaskStatus = "coming_up" | "todo" | "in_progress" | "done";
 
 export interface Course {
   id: string;

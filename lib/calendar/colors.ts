@@ -1,63 +1,65 @@
 import type { CourseColor } from "@/types/calendar";
 
-// Static class strings so Tailwind's JIT can see every variant.
-interface ColorClasses {
-  /** Solid-ish event block (week view). */
-  block: string;
-  /** Left accent bar / dot. */
-  accent: string;
-  /** Subtle chip (month view, kanban). */
-  chip: string;
-  /** Just the dot. */
-  dot: string;
+// Course colours, expressed as design-token values (see styles/variables.css)
+// instead of Tailwind classes, so every course accent stays inside the palette
+// the rest of the app uses.
+export interface CourseTone {
+  /** Solid swatch — dots, "now" markers, filled toggles. */
+  solid: string;
+  /** Event block background (week view, kanban chips). */
+  bg: string;
+  /** Event block border. */
+  border: string;
+  /** Readable text/icon colour on top of `bg`. */
+  fg: string;
 }
 
-const MAP: Record<CourseColor, ColorClasses> = {
+const MAP: Record<CourseColor, CourseTone> = {
   blue: {
-    block: "bg-blue-100 border-blue-300 text-blue-900 hover:bg-blue-200",
-    accent: "bg-blue-500",
-    chip: "bg-blue-50 text-blue-700 ring-blue-600/20",
-    dot: "bg-blue-500",
+    solid: "var(--color-info)",
+    bg: "rgba(142, 202, 230, 0.30)",
+    border: "rgba(142, 202, 230, 0.65)",
+    fg: "var(--color-primary)",
   },
   violet: {
-    block: "bg-violet-100 border-violet-300 text-violet-900 hover:bg-violet-200",
-    accent: "bg-violet-500",
-    chip: "bg-violet-50 text-violet-700 ring-violet-600/20",
-    dot: "bg-violet-500",
+    solid: "var(--color-accent)",
+    bg: "rgba(226, 109, 92, 0.16)",
+    border: "rgba(226, 109, 92, 0.5)",
+    fg: "#8A3327",
   },
   emerald: {
-    block: "bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-200",
-    accent: "bg-emerald-500",
-    chip: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-    dot: "bg-emerald-500",
+    solid: "var(--color-success)",
+    bg: "rgba(95, 138, 98, 0.16)",
+    border: "rgba(95, 138, 98, 0.5)",
+    fg: "var(--color-success)",
   },
   amber: {
-    block: "bg-amber-100 border-amber-300 text-amber-900 hover:bg-amber-200",
-    accent: "bg-amber-500",
-    chip: "bg-amber-50 text-amber-700 ring-amber-600/20",
-    dot: "bg-amber-500",
+    solid: "var(--color-secondary)",
+    bg: "rgba(255, 183, 3, 0.22)",
+    border: "rgba(255, 183, 3, 0.6)",
+    fg: "#805A00",
   },
   rose: {
-    block: "bg-rose-100 border-rose-300 text-rose-900 hover:bg-rose-200",
-    accent: "bg-rose-500",
-    chip: "bg-rose-50 text-rose-700 ring-rose-600/20",
-    dot: "bg-rose-500",
+    solid: "var(--color-error)",
+    bg: "rgba(201, 76, 76, 0.16)",
+    border: "rgba(201, 76, 76, 0.5)",
+    fg: "var(--color-error)",
   },
   cyan: {
-    block: "bg-cyan-100 border-cyan-300 text-cyan-900 hover:bg-cyan-200",
-    accent: "bg-cyan-500",
-    chip: "bg-cyan-50 text-cyan-700 ring-cyan-600/20",
-    dot: "bg-cyan-500",
+    solid: "var(--color-accent-muted)",
+    bg: "rgba(201, 203, 163, 0.4)",
+    border: "rgba(201, 203, 163, 0.8)",
+    fg: "#5B5D3F",
   },
 };
 
-const NEUTRAL: ColorClasses = {
-  block: "bg-slate-100 border-slate-300 text-slate-900 hover:bg-slate-200",
-  accent: "bg-slate-500",
-  chip: "bg-slate-100 text-slate-700 ring-slate-600/20",
-  dot: "bg-slate-500",
+const NEUTRAL: CourseTone = {
+  solid: "var(--color-text-muted)",
+  bg: "var(--color-surface-muted)",
+  border: "var(--color-border)",
+  fg: "var(--color-text-muted)",
 };
 
-export function colorClasses(color?: CourseColor): ColorClasses {
+export function courseTone(color?: CourseColor): CourseTone {
   return color ? MAP[color] : NEUTRAL;
 }

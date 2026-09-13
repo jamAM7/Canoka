@@ -9,7 +9,7 @@ import {
   rescheduleEvent,
   typeLabel,
 } from "@/lib/calendar/event-utils";
-import { colorClasses } from "@/lib/calendar/colors";
+import { courseTone } from "@/lib/calendar/colors";
 
 interface Props {
   event: CalendarEvent | null;
@@ -39,53 +39,41 @@ export function EventDetail({
   onSelect,
 }: Props) {
   const open = event !== null;
-  const c = colorClasses(course?.color);
+  const tone = courseTone(course?.color);
 
   return (
     <>
-      <div
-        onClick={onClose}
-        className={`fixed inset-0 z-30 bg-slate-900/20 transition-opacity ${
-          open ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-      />
-      <aside
-        className={`fixed right-0 top-0 z-40 flex h-full w-full max-w-sm flex-col border-l border-slate-200 bg-white shadow-xl transition-transform ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
+      <div onClick={onClose} className={`event-detail-scrim ${open ? "" : "is-closed"}`} />
+      <aside className={`event-detail-panel ${open ? "" : "is-closed"}`}>
         {event && (
           <>
-            <div className="flex items-start justify-between gap-3 border-b border-slate-200 p-4">
+            <div className="event-detail-header">
               <div>
                 <span
-                  className={`inline-block rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ring-1 ring-inset ${c.chip}`}
+                  className="badge"
+                  style={{ background: tone.bg, color: tone.fg, textTransform: "uppercase", fontSize: 11 }}
                 >
                   {course ? `${course.code} · ` : ""}
                   {typeLabel(event)}
                 </span>
-                <h2 className="mt-2 text-lg font-semibold leading-snug text-slate-900">
+                <h2 className="heading-4" style={{ marginTop: "var(--space-2)", marginBottom: 0 }}>
                   {event.title}
                 </h2>
               </div>
-              <button
-                onClick={onClose}
-                aria-label="Close"
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-slate-400 hover:bg-slate-100"
-              >
+              <button onClick={onClose} aria-label="Close" className="icon-btn">
                 ✕
               </button>
             </div>
 
-            <div className="cb-scroll flex-1 space-y-4 overflow-y-auto p-4 text-sm">
+            <div className="cb-scroll event-detail-body text-small">
               <div>
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                <p className="text-xs text-light" style={{ fontWeight: 600, textTransform: "uppercase", marginBottom: "var(--space-1)" }}>
                   When
                 </p>
                 {canEditSchedule(event) ? (
                   <ScheduleEditor event={event} onReschedule={onReschedule} />
                 ) : (
-                  <p className="text-slate-700">
+                  <p>
                     {format(new Date(event.start), "EEEE d MMMM")}
                     <br />
                     {formatEventTime(event)}
@@ -108,7 +96,8 @@ export function EventDetail({
                 <Row label="Part of">
                   <button
                     onClick={() => onSelect(parent.id)}
-                    className="font-medium text-blue-600 hover:underline"
+                    className="text-primary text-bold"
+                    style={{ background: "none", border: 0, padding: 0 }}
                   >
                     {parent.title}
                   </button>
@@ -117,19 +106,15 @@ export function EventDetail({
 
               {event.status && (
                 <div>
-                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  <p className="text-xs text-light" style={{ fontWeight: 600, textTransform: "uppercase", marginBottom: "var(--space-2)" }}>
                     Status
                   </p>
-                  <div className="flex gap-1.5">
+                  <div className="status-picker">
                     {STATUS_ORDER.map((s) => (
                       <button
                         key={s}
                         onClick={() => onStatusChange(event.id, s)}
-                        className={`rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset transition-colors ${
-                          event.status === s
-                            ? "bg-slate-900 text-white ring-slate-900"
-                            : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"
-                        }`}
+                        className={`status-chip ${event.status === s ? "active" : ""}`}
                       >
                         {STATUS_META[s].label}
                       </button>
@@ -140,22 +125,20 @@ export function EventDetail({
 
               {subtasks.length > 0 && (
                 <div>
-                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  <p className="text-xs text-light" style={{ fontWeight: 600, textTransform: "uppercase", marginBottom: "var(--space-1)" }}>
                     Subtasks ({subtasks.filter((t) => t.status === "done").length}/
                     {subtasks.length})
                   </p>
-                  <p className="mb-2 text-xs text-slate-400">
-                    Adjust any subtask's date or time to fit your schedule.
+                  <p className="text-xs text-light" style={{ marginBottom: "var(--space-2)" }}>
+                    Adjust any subtask&apos;s date or time to fit your schedule.
                   </p>
-                  <ul className="space-y-1.5">
+                  <ul className="stack-sm" style={{ listStyle: "none", padding: 0, margin: 0 }}>
                     {subtasks.map((t) => (
-                      <li
-                        key={t.id}
-                        className="rounded-md bg-slate-50 px-2 py-1.5"
-                      >
-                        <div className="flex items-center gap-2">
+                      <li key={t.id} className="subtask-row">
+                        <div className="subtask-row-main">
                           <input
                             type="checkbox"
+                            className="checkbox-input"
                             checked={t.status === "done"}
                             onChange={() =>
                               onStatusChange(
@@ -163,20 +146,15 @@ export function EventDetail({
                                 t.status === "done" ? "todo" : "done",
                               )
                             }
-                            className="rounded border-slate-300"
                           />
                           <button
                             onClick={() => onSelect(t.id)}
-                            className={`flex-1 text-left ${
-                              t.status === "done"
-                                ? "text-slate-400 line-through"
-                                : "text-slate-700 hover:text-blue-600"
-                            }`}
+                            className={`subtask-title ${t.status === "done" ? "is-done" : ""}`}
                           >
                             {t.title}
                           </button>
                         </div>
-                        <div className="mt-1.5 pl-6">
+                        <div className="subtask-editor">
                           <ScheduleEditor
                             event={t}
                             onReschedule={onReschedule}
@@ -217,30 +195,28 @@ function ScheduleEditor({
     onReschedule(event.id, next.start, next.end);
   };
 
-  const inputCls =
-    "rounded-md border border-slate-300 bg-white px-2 py-1 text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
-
   return (
-    <div className={compact ? "flex flex-wrap items-center gap-1.5 text-xs" : "space-y-2"}>
+    <div className={compact ? "compact-inputs" : "stack-sm"}>
       <input
         type="date"
         value={format(start, "yyyy-MM-dd")}
         onChange={(e) => commit({ date: e.target.value })}
-        className={`${inputCls} ${compact ? "" : "w-full"}`}
+        className="input"
+        style={compact ? undefined : { width: "100%" }}
       />
-      <div className="flex items-center gap-1.5">
+      <div className="flex align-center gap-xs">
         <input
           type="time"
           value={format(start, "HH:mm")}
           onChange={(e) => commit({ startTime: e.target.value })}
-          className={inputCls}
+          className="input"
         />
-        <span className="text-slate-400">–</span>
+        <span className="text-light">–</span>
         <input
           type="time"
           value={format(end, "HH:mm")}
           onChange={(e) => commit({ endTime: e.target.value })}
-          className={inputCls}
+          className="input"
         />
       </div>
     </div>
@@ -256,10 +232,10 @@ function Row({
 }) {
   return (
     <div>
-      <p className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+      <p className="text-xs text-light" style={{ fontWeight: 600, textTransform: "uppercase", marginBottom: 2 }}>
         {label}
       </p>
-      <p className="text-slate-700">{children}</p>
+      <p style={{ margin: 0 }}>{children}</p>
     </div>
   );
 }

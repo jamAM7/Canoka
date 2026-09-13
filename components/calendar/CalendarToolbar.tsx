@@ -1,17 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import type {
-  CalendarEventType,
-  CalendarViewMode,
-  Course,
-} from "@/types/calendar";
-import { colorClasses } from "@/lib/calendar/colors";
+import type { CalendarEventType, Course } from "@/types/calendar";
+import { courseTone } from "@/lib/calendar/colors";
+import { ChevronIcon } from "@/components/shell/icons";
 
 interface Props {
-  view: CalendarViewMode;
-  onViewChange: (v: CalendarViewMode) => void;
-  title: string;
+  period: { title: string; subtitle?: string };
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
@@ -24,132 +19,97 @@ interface Props {
   onToggleType: (t: CalendarEventType) => void;
 }
 
-const VIEWS: { key: CalendarViewMode; label: string }[] = [
-  { key: "week", label: "Week" },
-  { key: "month", label: "Month" },
-  { key: "kanban", label: "Kanban" },
+// The three sources the calendar merges together (see README): the UTS
+// timetable, Canvas-derived assessment deadlines, and the student's own /
+// AI-generated tasks. A diamond marks the two Canvas-shaped sources, a circle
+// the personal one — matching how they read on the calendar itself.
+const SOURCES: { type: CalendarEventType; label: string; mark: "diamond" | "circle" }[] = [
+  { type: "class", label: "University Timetable", mark: "diamond" },
+  { type: "assessment", label: "Assessment Schedule", mark: "diamond" },
+  { type: "task", label: "Personal Calendar", mark: "circle" },
 ];
-
-const TYPE_LABEL: Record<CalendarEventType, string> = {
-  class: "Classes",
-  assessment: "Assessments",
-  task: "Tasks",
-};
 
 export function CalendarToolbar(props: Props) {
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const activeFilters = props.hiddenCourses.size + props.hiddenTypes.size;
 
   return (
-    <header className="relative z-20 flex flex-wrap items-center gap-3 border-b border-slate-200 px-4 py-3">
-      <h1 className="text-lg font-semibold text-slate-900">Calendar</h1>
+    <header className="topbar calendar-topbar">
+      <div className="calendar-topbar-title-row">
+        {props.showNav && (
+          <div className="calendar-topbar-nav at-edge">
+            <button onClick={props.onPrev} aria-label="Previous" className="icon-btn">
+              <ChevronIcon dir="left" />
+            </button>
+            <button onClick={props.onToday} className="btn btn-outline btn-small">
+              Today
+            </button>
+            <button onClick={props.onNext} aria-label="Next" className="icon-btn">
+              <ChevronIcon dir="right" />
+            </button>
+          </div>
+        )}
 
-      {props.showNav && (
-        <div className="flex items-center gap-1">
-          <button
-            onClick={props.onPrev}
-            aria-label="Previous"
-            className="grid h-8 w-8 place-items-center rounded-md text-slate-500 hover:bg-slate-100"
-          >
-            ‹
-          </button>
-          <button
-            onClick={props.onToday}
-            className="rounded-md border border-slate-200 px-2.5 py-1 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Today
-          </button>
-          <button
-            onClick={props.onNext}
-            aria-label="Next"
-            className="grid h-8 w-8 place-items-center rounded-md text-slate-500 hover:bg-slate-100"
-          >
-            ›
-          </button>
+        <div className="calendar-period">
+          <div className="calendar-period-title">{props.period.title}</div>
+          {props.period.subtitle && (
+            <div className="calendar-period-subtitle">{props.period.subtitle}</div>
+          )}
         </div>
-      )}
+      </div>
 
-      <span className="text-sm font-medium text-slate-600">{props.title}</span>
+      <div className="calendar-sources-row">
+        <div className="source-toggles">
+          {SOURCES.map((s) => {
+            const active = !props.hiddenTypes.has(s.type);
+            return (
+              <button
+                key={s.type}
+                onClick={() => props.onToggleType(s.type)}
+                className={`source-toggle ${active ? "active" : ""}`}
+                aria-pressed={active}
+              >
+                <span className={`source-toggle-mark ${s.mark}`} />
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
 
-      <div className="ml-auto flex items-center gap-2">
-        <div className="relative">
+        <div className="course-filter">
           <button
             onClick={() => setFiltersOpen((o) => !o)}
-            className="flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="btn btn-ghost btn-small"
           >
-            Filters
-            {activeFilters > 0 && (
-              <span className="grid h-4 min-w-4 place-items-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold text-white">
-                {activeFilters}
+            Courses
+            {props.hiddenCourses.size > 0 && (
+              <span className="badge badge-primary" style={{ minHeight: 18, padding: "0 6px" }}>
+                {props.courses.length - props.hiddenCourses.size}/{props.courses.length}
               </span>
             )}
           </button>
 
           {filtersOpen && (
             <>
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => setFiltersOpen(false)}
-              />
-              <div className="absolute right-0 z-20 mt-2 w-60 rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
-                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Type
-                </p>
-                <ul className="mb-3 space-y-1">
-                  {props.types.map((t) => (
-                    <li key={t}>
-                      <label className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-slate-50">
-                        <input
-                          type="checkbox"
-                          checked={!props.hiddenTypes.has(t)}
-                          onChange={() => props.onToggleType(t)}
-                          className="rounded border-slate-300"
-                        />
-                        {TYPE_LABEL[t]}
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Course
-                </p>
-                <ul className="space-y-1">
-                  {props.courses.map((c) => (
-                    <li key={c.id}>
-                      <label className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-slate-50">
-                        <input
-                          type="checkbox"
-                          checked={!props.hiddenCourses.has(c.id)}
-                          onChange={() => props.onToggleCourse(c.id)}
-                          className="rounded border-slate-300"
-                        />
-                        <span
-                          className={`h-2.5 w-2.5 rounded-full ${colorClasses(c.color).dot}`}
-                        />
-                        <span className="truncate">{c.code}</span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
+              <div className="fixed inset-0" style={{ position: "fixed", inset: 0, zIndex: 10 }} onClick={() => setFiltersOpen(false)} />
+              <div className="course-filter-panel">
+                {props.courses.map((c) => (
+                  <label key={c.id} className="course-filter-row">
+                    <input
+                      type="checkbox"
+                      className="checkbox-input"
+                      checked={!props.hiddenCourses.has(c.id)}
+                      onChange={() => props.onToggleCourse(c.id)}
+                    />
+                    <span
+                      className="course-filter-dot"
+                      style={{ background: courseTone(c.color).solid }}
+                    />
+                    <span>{c.code}</span>
+                  </label>
+                ))}
               </div>
             </>
           )}
-        </div>
-
-        <div className="flex rounded-md border border-slate-200 p-0.5">
-          {VIEWS.map((v) => (
-            <button
-              key={v.key}
-              onClick={() => props.onViewChange(v.key)}
-              className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
-                props.view === v.key
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              {v.label}
-            </button>
-          ))}
         </div>
       </div>
     </header>

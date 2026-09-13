@@ -6,6 +6,7 @@ import {
   addWeeks,
   endOfWeek,
   format,
+  getWeek,
   startOfWeek,
 } from "date-fns";
 import type {
@@ -16,6 +17,7 @@ import type {
   TaskStatus,
 } from "@/types/calendar";
 import { WEEK_OPTS } from "@/lib/calendar/event-utils";
+import { Sidebar } from "@/components/shell/Sidebar";
 import { CalendarToolbar } from "./CalendarToolbar";
 import { WeekView } from "./WeekView";
 import { MonthView } from "./MonthView";
@@ -83,66 +85,73 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
     return next;
   }
 
-  const title = useMemo(() => {
-    if (view === "month") return format(anchor, "MMMM yyyy");
-    if (view === "kanban") return "Task board";
+  const period = useMemo(() => {
+    if (view === "month") {
+      return { title: format(anchor, "MMMM"), subtitle: format(anchor, "yyyy") };
+    }
+    if (view === "kanban") {
+      return { title: "Kanban Board" };
+    }
     const s = startOfWeek(anchor, WEEK_OPTS);
     const e = endOfWeek(anchor, WEEK_OPTS);
     const sameMonth = s.getMonth() === e.getMonth();
-    return sameMonth
+    const range = sameMonth
       ? `${format(s, "MMM d")} – ${format(e, "d, yyyy")}`
       : `${format(s, "MMM d")} – ${format(e, "MMM d, yyyy")}`;
+    return { title: `Week ${getWeek(anchor, WEEK_OPTS)}`, subtitle: range };
   }, [view, anchor]);
 
   return (
-    <div className="flex h-full flex-col bg-white">
-      <CalendarToolbar
-        view={view}
-        onViewChange={setView}
-        title={title}
-        onPrev={() => shift(-1)}
-        onNext={() => shift(1)}
-        onToday={() => setAnchor(new Date())}
-        showNav={view !== "kanban"}
-        courses={courses}
-        hiddenCourses={hiddenCourses}
-        onToggleCourse={(id) =>
-          setHiddenCourses((s) => toggle(s, id))
-        }
-        types={ALL_TYPES}
-        hiddenTypes={hiddenTypes}
-        onToggleType={(t) => setHiddenTypes((s) => toggle(s, t))}
-      />
+    <div className="app-shell calendar-shell">
+      <Sidebar active="calendar" calendarView={view} onCalendarViewChange={setView} />
 
-      <div className="min-h-0 flex-1">
-        {view === "week" && (
-          <WeekView
-            anchor={anchor}
-            events={visibleEvents}
-            courseById={courseById}
-            onSelect={setSelectedId}
-          />
-        )}
-        {view === "month" && (
-          <MonthView
-            anchor={anchor}
-            events={visibleEvents}
-            courseById={courseById}
-            onSelect={setSelectedId}
-            onPickDay={(d) => {
-              setAnchor(d);
-              setView("week");
-            }}
-          />
-        )}
-        {view === "kanban" && (
-          <KanbanView
-            events={visibleEvents}
-            courseById={courseById}
-            onSelect={setSelectedId}
-            onStatusChange={setStatus}
-          />
-        )}
+      <div className="main">
+        <CalendarToolbar
+          period={period}
+          onPrev={() => shift(-1)}
+          onNext={() => shift(1)}
+          onToday={() => setAnchor(new Date())}
+          showNav={view !== "kanban"}
+          courses={courses}
+          hiddenCourses={hiddenCourses}
+          onToggleCourse={(id) =>
+            setHiddenCourses((s) => toggle(s, id))
+          }
+          types={ALL_TYPES}
+          hiddenTypes={hiddenTypes}
+          onToggleType={(t) => setHiddenTypes((s) => toggle(s, t))}
+        />
+
+        <div className="calendar-body">
+          {view === "week" && (
+            <WeekView
+              anchor={anchor}
+              events={visibleEvents}
+              courseById={courseById}
+              onSelect={setSelectedId}
+            />
+          )}
+          {view === "month" && (
+            <MonthView
+              anchor={anchor}
+              events={visibleEvents}
+              courseById={courseById}
+              onSelect={setSelectedId}
+              onPickDay={(d) => {
+                setAnchor(d);
+                setView("week");
+              }}
+            />
+          )}
+          {view === "kanban" && (
+            <KanbanView
+              events={visibleEvents}
+              courseById={courseById}
+              onSelect={setSelectedId}
+              onStatusChange={setStatus}
+            />
+          )}
+        </div>
       </div>
 
       <EventDetail

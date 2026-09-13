@@ -6,11 +6,11 @@
 import { CalendarWorkspace } from "@/components/calendar/CalendarWorkspace";
 import { MOCK_COURSES, MOCK_EVENTS } from "@/lib/calendar/mock-data";
 
-export const metadata = { title: "Calendar · StudyFlow" };
+export const metadata = { title: "Calendar · Canoka" };
 
 export default function CalendarPage() {
   return (
-    <main className="h-screen">
+    <main>
       <CalendarWorkspace events={MOCK_EVENTS} courses={MOCK_COURSES} />
     </main>
   );

@@ -4,7 +4,7 @@ A student app that syncs Canvas into one place: AI-generated notes and calendar
 
 ## Overview
 
-StudyFlow pulls course content and deadlines from Canvas, turns them into organised per-subject/per-week notes and surfaces everything on a home dashboard.
+Canoka pulls course content and deadlines from Canvas, turns them into organised per-subject/per-week notes and surfaces everything on a home dashboard.
 
 ## Core features
 

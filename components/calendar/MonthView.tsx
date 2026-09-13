@@ -12,7 +12,7 @@ import {
 } from "date-fns";
 import type { CalendarEvent, Course } from "@/types/calendar";
 import { WEEK_OPTS, eventsOnDay } from "@/lib/calendar/event-utils";
-import { colorClasses } from "@/lib/calendar/colors";
+import { courseTone } from "@/lib/calendar/colors";
 
 interface Props {
   anchor: Date;
@@ -39,21 +39,18 @@ export function MonthView({
   for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="grid grid-cols-7 border-b border-slate-200">
+    <div className="calendar" style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, borderRadius: 0, border: 0 }}>
+      <div className="calendar-weekdays">
         {WEEKDAYS.map((d) => (
-          <div
-            key={d}
-            className="px-2 py-1.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-400"
-          >
+          <div key={d} className="calendar-weekday">
             {d}
           </div>
         ))}
       </div>
 
-      <div className="grid min-h-0 flex-1 auto-rows-fr">
+      <div style={{ display: "grid", gridTemplateRows: `repeat(${weeks.length}, 1fr)`, flex: 1, minHeight: 0 }}>
         {weeks.map((week, wi) => (
-          <div key={wi} className="grid grid-cols-7">
+          <div key={wi} className="calendar-grid">
             {week.map((day) => {
               const dayEvents = eventsOnDay(events, day);
               const inMonth = isSameMonth(day, anchor);
@@ -63,40 +60,29 @@ export function MonthView({
               return (
                 <div
                   key={day.toISOString()}
-                  className={`min-h-0 border-b border-l border-slate-100 p-1 ${
-                    inMonth ? "bg-white" : "bg-slate-50/60"
-                  }`}
+                  className={`calendar-day ${inMonth ? "" : "muted"}`}
+                  style={{ minHeight: 0 }}
                 >
                   <button
                     onClick={() => onPickDay(day)}
-                    className={`mb-1 grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${
-                      isToday(day)
-                        ? "bg-blue-600 text-white"
-                        : inMonth
-                          ? "text-slate-700 hover:bg-slate-100"
-                          : "text-slate-400 hover:bg-slate-100"
-                    }`}
+                    className={`calendar-date ${isToday(day) ? "today" : ""}`}
+                    style={{ border: 0, background: isToday(day) ? undefined : "transparent", fontWeight: 600 }}
                   >
                     {format(day, "d")}
                   </button>
 
-                  <div className="space-y-0.5">
+                  <div className="calendar-day-body">
                     {visible.map((ev) => {
-                      const c = colorClasses(
-                        courseById.get(ev.courseId ?? "")?.color,
-                      );
+                      const tone = courseTone(courseById.get(ev.courseId ?? "")?.color);
                       return (
                         <button
                           key={ev.id}
                           onClick={() => onSelect(ev.id)}
-                          className={`flex w-full items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] font-medium ring-1 ring-inset ${c.chip} ${
-                            ev.status === "done"
-                              ? "line-through opacity-60"
-                              : ""
-                          }`}
+                          className={`calendar-event-chip ${ev.status === "done" ? "is-done" : ""}`}
+                          style={{ background: tone.bg, color: tone.fg }}
                         >
-                          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.dot}`} />
-                          <span className="tabular-nums opacity-70">
+                          <span className="calendar-event-chip-dot" style={{ background: tone.solid }} />
+                          <span className="tabular-nums" style={{ opacity: 0.75 }}>
                             {format(new Date(ev.start), "h:mm")}
                           </span>
                           <span className="truncate">{ev.title}</span>
@@ -104,10 +90,7 @@ export function MonthView({
                       );
                     })}
                     {overflow > 0 && (
-                      <button
-                        onClick={() => onPickDay(day)}
-                        className="px-1 text-[11px] font-medium text-slate-500 hover:text-slate-800"
-                      >
+                      <button onClick={() => onPickDay(day)} className="calendar-more-link">
                         +{overflow} more
                       </button>
                     )}

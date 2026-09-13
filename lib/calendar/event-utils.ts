@@ -93,16 +93,19 @@ export function layoutDayColumn(events: CalendarEvent[]): Array<{
   return result;
 }
 
-export const STATUS_META: Record<
-  TaskStatus,
-  { label: string; column: string }
-> = {
-  todo: { label: "To do", column: "bg-slate-100" },
-  in_progress: { label: "In progress", column: "bg-blue-50" },
-  done: { label: "Done", column: "bg-emerald-50" },
+export const STATUS_META: Record<TaskStatus, { label: string }> = {
+  coming_up: { label: "Coming Up" },
+  todo: { label: "Not Started" },
+  in_progress: { label: "In Progress" },
+  done: { label: "Completed" },
 };
 
-export const STATUS_ORDER: TaskStatus[] = ["todo", "in_progress", "done"];
+export const STATUS_ORDER: TaskStatus[] = [
+  "coming_up",
+  "todo",
+  "in_progress",
+  "done",
+];
 
 /**
  * Recompute an event's `start`/`end` from user-edited fields, so a student can
@@ -141,6 +144,18 @@ export function rescheduleEvent(
 export function formatEventTime(ev: CalendarEvent): string {
   const { start, end } = parse(ev);
   return `${format(start, "h:mm")}–${format(end, "h:mm a")}`;
+}
+
+/** Short relative label for a due date, e.g. "Overdue", "Due today", "in 3 days". */
+export function relativeDueLabel(due: Date, now: Date = new Date()): string {
+  const dueDay = startOfDay(due);
+  const today = startOfDay(now);
+  const days = Math.round((+dueDay - +today) / 86_400_000);
+
+  if (due < now) return "Overdue";
+  if (days === 0) return "Due today";
+  if (days === 1) return "Due tomorrow";
+  return `in ${days} days`;
 }
 
 export function typeLabel(ev: CalendarEvent): string {

@@ -82,7 +82,7 @@ const drafts: Draft[] = [
     start: 13,
     durationH: 2,
     courseId: "c2",
-    status: "todo",
+    status: "coming_up",
     dueDay: 9,
     dueHour: 17,
     notes: "Domain model + wireframes.",
@@ -107,7 +107,7 @@ const drafts: Draft[] = [
 
   // ----- Self / AI study tasks -----
   { title: "Review lecture notes: graphs", type: "task", day: 1, start: 18, durationH: 1, courseId: "c1", status: "todo" },
-  { title: "Practice past-paper questions", type: "task", day: 5, start: 10, durationH: 2, courseId: "c3", status: "todo" },
+  { title: "Practice past-paper questions", type: "task", day: 5, start: 10, durationH: 2, courseId: "c3", status: "coming_up" },
   { title: "Summarise readings (AI-generated)", type: "task", day: 6, start: 15, durationH: 1, courseId: "c4", status: "todo" },
   { title: "Weekly planning", type: "task", day: 0, start: 8, durationH: 0.5, status: "done" },
 ];
