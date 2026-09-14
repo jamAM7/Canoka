@@ -1,0 +1,673 @@
+/* =========================================================
+   CALENDAR — APP-SPECIFIC ADDITIONS
+   Extends variables.css / styles.css for pieces the shared
+   design system doesn't define yet (nested nav, source
+   toggles, the hour-by-hour time grid, a 4-column board).
+   Keep using tokens from variables.css — no new hex values.
+   ========================================================= */
+
+
+/* ---------------------------------------------------------
+   Shell: calendar page pins the app-shell to the viewport
+   and scrolls internally instead of growing the document.
+   --------------------------------------------------------- */
+
+.calendar-shell {
+    height: 100vh;
+    overflow: hidden;
+}
+
+.calendar-shell .main {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    min-height: 0;
+}
+
+.calendar-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Keep the sidebar visible on the calendar page at narrower widths
+   instead of collapsing off-canvas (no menu-button wiring yet). */
+@media (max-width: 900px) {
+    .calendar-shell .sidebar {
+        position: sticky;
+        transform: none;
+    }
+
+    .calendar-shell.app-shell {
+        grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    }
+}
+
+
+/* ---------------------------------------------------------
+   Sidebar: brand mark + nested Calendar sub-nav + settings.
+   --------------------------------------------------------- */
+
+.brand-mark {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-10);
+    text-decoration: none;
+}
+
+.brand-mark-badge {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: var(--color-white);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
+}
+
+.brand-mark-word {
+    color: var(--color-primary);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+}
+
+.nav-link svg {
+    flex: none;
+}
+
+.nav-sublist {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: var(--space-1) 0 var(--space-2) var(--space-4);
+    padding-left: var(--space-4);
+    border-left: var(--border-width) solid var(--color-border-light);
+}
+
+.nav-sublink {
+    display: block;
+    width: 100%;
+    min-height: 36px;
+    padding: 0 var(--space-3);
+
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    text-align: left;
+
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.nav-sublink:hover {
+    background: var(--color-surface-muted);
+    color: var(--color-text);
+}
+
+.nav-sublink.active {
+    color: var(--color-primary);
+    font-weight: var(--font-weight-semibold);
+}
+
+
+/* ---------------------------------------------------------
+   Calendar topbar: centred period title + date nav.
+   --------------------------------------------------------- */
+
+.calendar-topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+    padding-block: var(--space-5);
+}
+
+.calendar-topbar-title-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    min-height: 40px;
+}
+
+.calendar-topbar-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.calendar-topbar-nav.at-edge {
+    position: absolute;
+    left: 0;
+}
+
+.calendar-period {
+    text-align: center;
+}
+
+.calendar-period-title {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+    line-height: var(--line-height-tight);
+}
+
+.calendar-period-subtitle {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.icon-btn {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-text-muted);
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.icon-btn:hover {
+    background: var(--color-surface-muted);
+    color: var(--color-text);
+}
+
+
+/* ---------------------------------------------------------
+   Source toggles (University Timetable / Assessment
+   Schedule / Personal Calendar) + the course filter.
+   --------------------------------------------------------- */
+
+.calendar-sources-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.source-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.source-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+
+    min-height: 32px;
+    padding: 0 var(--space-3);
+
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+
+    transition:
+        border-color var(--transition-fast),
+        background-color var(--transition-fast),
+        color var(--transition-fast);
+}
+
+.source-toggle:hover {
+    border-color: var(--color-primary-light);
+}
+
+.source-toggle.active {
+    border-color: var(--color-primary);
+    background: rgba(142, 202, 230, 0.18);
+    color: var(--color-primary);
+}
+
+.source-toggle-mark {
+    width: 8px;
+    height: 8px;
+    flex: none;
+    border: 1.5px solid currentColor;
+}
+
+.source-toggle-mark.diamond {
+    transform: rotate(45deg);
+}
+
+.source-toggle-mark.circle {
+    border-radius: 50%;
+}
+
+.source-toggle.active .source-toggle-mark {
+    background: currentColor;
+}
+
+.course-filter {
+    position: relative;
+}
+
+.course-filter-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + var(--space-2));
+    z-index: 20;
+    width: 220px;
+    padding: var(--space-3);
+    background: var(--color-surface);
+    border: var(--border-width) solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 12px 24px -12px rgba(12, 12, 32, 0.18);
+}
+
+.course-filter-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) 0;
+    font-size: var(--font-size-sm);
+}
+
+.course-filter-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: none;
+}
+
+
+/* ---------------------------------------------------------
+   Week view time grid (hour rows × 7 day columns).
+   --------------------------------------------------------- */
+
+.time-grid-header {
+    display: grid;
+    grid-template-columns: 3.5rem repeat(7, minmax(0, 1fr));
+    border-bottom: var(--border-width) solid var(--color-border-light);
+    padding-right: var(--space-3);
+}
+
+.time-grid-header-cell {
+    border-left: var(--border-width) solid var(--color-border-light);
+    padding: var(--space-2);
+    text-align: center;
+}
+
+.time-grid-header-day {
+    color: var(--color-text-light);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.time-grid-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.time-grid-body {
+    display: grid;
+    grid-template-columns: 3.5rem repeat(7, minmax(0, 1fr));
+    padding-right: var(--space-3);
+}
+
+.time-grid-hours {
+    position: relative;
+}
+
+.time-grid-hour-label {
+    position: relative;
+    top: -0.5em;
+    padding-right: var(--space-2);
+    text-align: right;
+    color: var(--color-text-light);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+
+.time-grid-day {
+    position: relative;
+    border-left: var(--border-width) solid var(--color-border-light);
+}
+
+.time-grid-hour-row {
+    border-bottom: var(--border-width) solid var(--color-border-light);
+}
+
+.time-grid-now-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+}
+
+.time-grid-now-dot {
+    width: 8px;
+    height: 8px;
+    margin-left: -4px;
+    border-radius: 50%;
+    background: var(--color-error);
+}
+
+.time-grid-now-track {
+    flex: 1;
+    height: 1px;
+    background: var(--color-error);
+}
+
+.time-grid-event {
+    position: absolute;
+    overflow: hidden;
+    border: var(--border-width) solid transparent;
+    border-radius: var(--radius-sm);
+    padding: var(--space-1) var(--space-2);
+    text-align: left;
+    font-size: 11px;
+    line-height: 1.3;
+    box-shadow: 0 1px 2px rgba(12, 12, 32, 0.06);
+    transition: filter var(--transition-fast);
+}
+
+.time-grid-event:hover {
+    filter: brightness(0.97);
+}
+
+.time-grid-event.is-task {
+    border-style: dashed;
+}
+
+.time-grid-event.is-done {
+    opacity: 0.6;
+}
+
+.time-grid-event-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-weight: var(--font-weight-semibold);
+}
+
+.time-grid-event-title.is-done {
+    text-decoration: line-through;
+}
+
+.time-grid-event-meta {
+    opacity: 0.85;
+}
+
+.due-flag {
+    display: block;
+    width: 100%;
+    margin-top: var(--space-1);
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: var(--font-weight-semibold);
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+/* ---------------------------------------------------------
+   Month view (event chip + "today" number reuse
+   .calendar-* classes from styles.css).
+   --------------------------------------------------------- */
+
+.calendar-day-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.calendar-event-chip {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    width: 100%;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: var(--font-weight-medium);
+    text-align: left;
+    overflow: hidden;
+}
+
+.calendar-event-chip.is-done {
+    opacity: 0.6;
+    text-decoration: line-through;
+}
+
+.calendar-event-chip-dot {
+    width: 6px;
+    height: 6px;
+    flex: none;
+    border-radius: 50%;
+}
+
+.calendar-more-link {
+    padding: 0 var(--space-2);
+    border: 0;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: var(--font-weight-medium);
+    text-align: left;
+}
+
+.calendar-more-link:hover {
+    color: var(--color-text);
+}
+
+
+/* ---------------------------------------------------------
+   Kanban: four status columns instead of three, plus
+   drag-over and overdue states.
+   --------------------------------------------------------- */
+
+.kanban-4up {
+    grid-template-columns: repeat(4, minmax(240px, 1fr));
+    height: 100%;
+    padding: var(--space-5);
+}
+
+.kanban-column {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.kanban-column.drag-over {
+    outline: 2px dashed var(--color-primary-light);
+    outline-offset: -2px;
+    background: rgba(142, 202, 230, 0.15);
+}
+
+.kanban-count {
+    display: grid;
+    place-items: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+}
+
+.kanban-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.kanban-empty {
+    padding: var(--space-6) var(--space-2);
+    text-align: center;
+    color: var(--color-text-light);
+    font-size: var(--font-size-sm);
+}
+
+.kanban-card.dragging {
+    opacity: 0.4;
+}
+
+.kanban-card-tags {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.kanban-card-due {
+    margin-top: var(--space-2);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-muted);
+}
+
+.kanban-card-due.overdue {
+    color: var(--color-error);
+}
+
+
+/* ---------------------------------------------------------
+   Event detail slide-over.
+   --------------------------------------------------------- */
+
+.event-detail-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: rgba(12, 12, 32, 0.28);
+    transition: opacity var(--transition-normal);
+}
+
+.event-detail-scrim.is-closed {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.event-detail-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 380px;
+    height: 100%;
+    background: var(--color-surface);
+    border-left: var(--border-width) solid var(--color-border-light);
+    box-shadow: -12px 0 32px -16px rgba(12, 12, 32, 0.25);
+    transition: transform var(--transition-normal);
+}
+
+.event-detail-panel.is-closed {
+    transform: translateX(100%);
+}
+
+.event-detail-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-5);
+    border-bottom: var(--border-width) solid var(--color-border-light);
+}
+
+.event-detail-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+}
+
+.status-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.status-chip {
+    padding: 0 var(--space-3);
+    min-height: 30px;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+}
+
+.status-chip.active {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: var(--color-white);
+}
+
+.subtask-row {
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-muted);
+}
+
+.subtask-row-main {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.subtask-title {
+    flex: 1;
+    text-align: left;
+    background: none;
+    border: 0;
+    color: var(--color-text);
+}
+
+.subtask-title.is-done {
+    color: var(--color-text-light);
+    text-decoration: line-through;
+}
+
+.subtask-editor {
+    margin-top: var(--space-2);
+    padding-left: 26px;
+}
+
+.compact-inputs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.compact-inputs .input {
+    height: 32px;
+    padding-inline: var(--space-2);
+    font-size: var(--font-size-xs);
+    width: auto;
+}

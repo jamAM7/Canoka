@@ -1,0 +1,141 @@
+/* =========================================================
+   STUDY MANAGEMENT TOOL — DESIGN VARIABLES
+   Change values in this file to redesign the whole application.
+   ========================================================= */
+
+:root {
+
+    /* ---------------------------------------------------------
+       BRAND COLOURS
+       Based on the supplied palettes.
+       Palette 2 is the primary visual direction.
+       --------------------------------------------------------- */
+
+    --color-primary: #023047;
+    --color-primary-light: #8ECAE6;
+    --color-primary-dark: #012536;
+
+    --color-secondary: #FFB703;
+    --color-secondary-dark: #FB8500;
+
+    --color-accent: #E26D5C;
+    --color-accent-muted: #C9CBA3;
+
+    /* Semantic colours */
+    --color-success: #5F8A62;
+    --color-warning: #FFB703;
+    --color-error: #C94C4C;
+    --color-info: #8ECAE6;
+
+    /* Neutrals */
+    --color-text: #0C0C20;
+    --color-text-muted: #62626D;
+    --color-text-light: #8A8A92;
+
+    --color-background: #F6FAF9;
+    --color-surface: #FFFFFF;
+    --color-surface-muted: #EEF3F3;
+
+    --color-border: #D9DFDF;
+    --color-border-light: #E8ECEC;
+
+    --color-white: #FFFFFF;
+    --color-black: #0C0C20;
+
+
+    /* ---------------------------------------------------------
+       TYPOGRAPHY
+       Karla is the preferred font.
+       Fallbacks keep the design usable if it cannot load.
+       --------------------------------------------------------- */
+
+    --font-body: var(--font-karla), "Karla", Arial, Helvetica, sans-serif;
+    --font-heading: var(--font-karla), "Karla", Arial, Helvetica, sans-serif;
+
+    --font-size-xs: 0.75rem;       /* 12px */
+    --font-size-sm: 0.875rem;      /* 14px */
+    --font-size-base: 1rem;        /* 16px */
+    --font-size-lg: 1.125rem;      /* 18px */
+    --font-size-xl: 1.375rem;      /* 22px */
+    --font-size-2xl: 1.75rem;      /* 28px */
+    --font-size-3xl: 2.25rem;      /* 36px */
+    --font-size-4xl: 3rem;         /* 48px */
+
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    --line-height-tight: 1.2;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.7;
+
+
+    /* ---------------------------------------------------------
+       SPACING
+       Spacious design system.
+       --------------------------------------------------------- */
+
+    --space-1: 0.25rem;    /* 4px */
+    --space-2: 0.5rem;     /* 8px */
+    --space-3: 0.75rem;    /* 12px */
+    --space-4: 1rem;       /* 16px */
+    --space-5: 1.25rem;    /* 20px */
+    --space-6: 1.5rem;     /* 24px */
+    --space-8: 2rem;       /* 32px */
+    --space-10: 2.5rem;    /* 40px */
+    --space-12: 3rem;      /* 48px */
+    --space-16: 4rem;      /* 64px */
+    --space-20: 5rem;      /* 80px */
+
+
+    /* ---------------------------------------------------------
+       BORDERS & SHAPES
+       Slightly rounded, no shadows.
+       --------------------------------------------------------- */
+
+    --border-width: 1px;
+    --border-color: var(--color-border);
+
+    --radius-sm: 5px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-pill: 999px;
+
+    --focus-ring: 0 0 0 3px rgba(142, 202, 230, 0.45);
+
+
+    /* ---------------------------------------------------------
+       LAYOUT
+       --------------------------------------------------------- */
+
+    --content-max-width: 1440px;
+    --content-reading-width: 760px;
+
+    --sidebar-width: 240px;
+    --navbar-height: 72px;
+
+    --page-padding: var(--space-8);
+
+
+    /* ---------------------------------------------------------
+       CONTROLS
+       --------------------------------------------------------- */
+
+    --input-height: 44px;
+    --button-height: 44px;
+
+    --transition-fast: 150ms ease;
+    --transition-normal: 220ms ease;
+
+
+    /* ---------------------------------------------------------
+       BREAKPOINTS
+       Used as reference values in styles.css.
+       --------------------------------------------------------- */
+
+    --breakpoint-mobile: 640px;
+    --breakpoint-tablet: 900px;
+    --breakpoint-desktop: 1200px;
+}

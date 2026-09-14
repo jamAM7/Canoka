@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # Dependencies
 node_modules/
 
@@ -36,3 +37,15 @@ venv/
 .claude
 .DS_Store
 >>>>>>> 0b33100405e9f6a78e1aea7bedf3e2ccf22e4bc1
+=======
+/node_modules
+/.next
+/out
+/build
+*.tsbuildinfo
+next-env.d.ts
+.env
+.env*.local
+.DS_Store
+.vercel
+>>>>>>> origin/Mind
