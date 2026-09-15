@@ -1,11 +1,3 @@
-<<<<<<< HEAD
-import "../globals.css";
-import type { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Canoka",
-  description: "A simple student workspace for assignments, calendars, and notes.",
-=======
 import "./globals.css";
 import "@/styles/variables.css";
 import "@/styles/styles.css";
@@ -23,22 +15,10 @@ const karla = Karla({
 export const metadata: Metadata = {
   title: "Canoka",
   description: "Canvas-synced notes, calendar, and quizzes for students.",
->>>>>>> origin/Mind
 };
 
 export default function RootLayout({
   children,
-<<<<<<< HEAD
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  );
-}
-=======
 }: {
   children: React.ReactNode;
 }) {
@@ -48,4 +28,3 @@ export default function RootLayout({
     </html>
   );
 }
->>>>>>> origin/Mind

@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-import StudyFlowApp from "../../components/studyflow-app";
-
-export default function CalendarPage() {
-  return <StudyFlowApp initialView="calendar" />;
-}
-=======
 // Calendar: classes, assessment tasks, self/AI tasks.
 // Weekly is the primary view; monthly and Kanban are switchable from the toolbar.
 //
@@ -22,4 +15,3 @@ export default function CalendarPage() {
     </main>
   );
 }
->>>>>>> origin/Mind

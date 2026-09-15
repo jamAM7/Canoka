@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-import StudyFlowApp from "../../components/studyflow-app";
-
-export default function DashboardPage() {
-  return <StudyFlowApp initialView="dashboard" />;
-}
-=======
 // Home dashboard — scoped to exactly what the README assigns it:
 // notifications, "due this week", and quick links into notes.
 import { MOCK_COURSES, MOCK_EVENTS } from "@/lib/calendar/mock-data";
@@ -23,4 +16,3 @@ export default function DashboardPage() {
     </div>
   );
 }
->>>>>>> origin/Mind
