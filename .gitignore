@@ -1,13 +1,19 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-# Dependencies
+# Node / Next.js
 node_modules/
-
-# Next.js build output
 .next/
 out/
+/build
+*.tsbuildinfo
+.vercel
 
-# Local environment files
+# Python (scraper, llm)
+__pycache__/
+*.pyc
+.venv/
+venv/
+.cache/
+
+# Environment files: commit only the .example versions
 .env
 .env.local
 .env.*.local
@@ -19,33 +25,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# TypeScript build cache
-*.tsbuildinfo
-
-# Editor and OS files
+# Editor, OS and tool files
 .DS_Store
 Thumbs.db
 .vscode/
-=======
-.env
-out/
-.cache/
-__pycache__/
-*.pyc
-.venv/
-venv/
 .claude
-.DS_Store
->>>>>>> 0b33100405e9f6a78e1aea7bedf3e2ccf22e4bc1
-=======
-/node_modules
-/.next
-/out
-/build
-*.tsbuildinfo
-next-env.d.ts
-.env
-.env*.local
-.DS_Store
-.vercel
->>>>>>> origin/Mind

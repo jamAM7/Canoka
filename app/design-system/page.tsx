@@ -1,4 +1,8 @@
-export default function HomePage() {
+// Reference page for the Tailwind theme in tailwind.config.ts. Not linked from
+// the sidebar; open /design-system directly.
+export const metadata = { title: "Design system · Canoka" };
+
+export default function DesignSystemPage() {
   return (
     <main className="min-h-screen bg-background p-10 text-text">
       <div className="mx-auto max-w-5xl space-y-10">
