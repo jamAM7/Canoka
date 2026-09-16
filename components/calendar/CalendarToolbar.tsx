@@ -33,56 +33,78 @@ export function CalendarToolbar(props: Props) {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   return (
-    <header className="topbar calendar-topbar">
-      <div className="calendar-topbar-title-row">
+    <header className="flex flex-col gap-3 border-b border-border bg-background px-6 py-5">
+      <div className="relative flex min-h-10 items-center justify-center">
         {props.showNav && (
-          <div className="calendar-topbar-nav at-edge">
-            <button onClick={props.onPrev} aria-label="Previous" className="icon-btn">
+          <div className="absolute left-0 flex items-center gap-1">
+            <button
+              onClick={props.onPrev}
+              aria-label="Previous"
+              className="grid h-8 w-8 place-items-center rounded-md text-text-muted transition-colors hover:bg-surface-muted hover:text-text"
+            >
               <ChevronIcon dir="left" />
             </button>
-            <button onClick={props.onToday} className="btn btn-outline btn-small">
+            <button
+              onClick={props.onToday}
+              className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text transition-colors hover:border-primary-light hover:bg-surface-muted"
+            >
               Today
             </button>
-            <button onClick={props.onNext} aria-label="Next" className="icon-btn">
+            <button
+              onClick={props.onNext}
+              aria-label="Next"
+              className="grid h-8 w-8 place-items-center rounded-md text-text-muted transition-colors hover:bg-surface-muted hover:text-text"
+            >
               <ChevronIcon dir="right" />
             </button>
           </div>
         )}
 
-        <div className="calendar-period">
-          <div className="calendar-period-title">{props.period.title}</div>
+        <div className="text-center">
+          <div className="text-xl font-semibold text-text">{props.period.title}</div>
           {props.period.subtitle && (
-            <div className="calendar-period-subtitle">{props.period.subtitle}</div>
+            <div className="text-sm text-text-muted">{props.period.subtitle}</div>
           )}
         </div>
       </div>
 
-      <div className="calendar-sources-row">
-        <div className="source-toggles">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {SOURCES.map((s) => {
             const active = !props.hiddenTypes.has(s.type);
             return (
               <button
                 key={s.type}
                 onClick={() => props.onToggleType(s.type)}
-                className={`source-toggle ${active ? "active" : ""}`}
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                  active
+                    ? "border-border bg-surface text-text"
+                    : "border-border bg-surface text-text-muted"
+                }`}
                 aria-pressed={active}
               >
-                <span className={`source-toggle-mark ${s.mark}`} />
+                <span
+                  className={`h-2.5 w-2.5 rounded-full ${
+                    s.mark === "diamond" ? "rotate-45 rounded-sm" : ""
+                  }`}
+                  style={{
+                    background: active ? "#023047" : "#D9DFDF",
+                  }}
+                />
                 {s.label}
               </button>
             );
           })}
         </div>
 
-        <div className="course-filter">
+        <div className="relative">
           <button
             onClick={() => setFiltersOpen((o) => !o)}
-            className="btn btn-ghost btn-small"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text transition-colors hover:border-primary-light hover:bg-surface-muted"
           >
             Courses
             {props.hiddenCourses.size > 0 && (
-              <span className="badge badge-primary" style={{ minHeight: 18, padding: "0 6px" }}>
+              <span className="inline-flex min-h-[18px] items-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-white">
                 {props.courses.length - props.hiddenCourses.size}/{props.courses.length}
               </span>
             )}
@@ -90,18 +112,21 @@ export function CalendarToolbar(props: Props) {
 
           {filtersOpen && (
             <>
-              <div className="fixed inset-0" style={{ position: "fixed", inset: 0, zIndex: 10 }} onClick={() => setFiltersOpen(false)} />
-              <div className="course-filter-panel">
+              <div className="fixed inset-0 z-10" onClick={() => setFiltersOpen(false)} />
+              <div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-border bg-surface p-2 shadow-md">
                 {props.courses.map((c) => (
-                  <label key={c.id} className="course-filter-row">
+                  <label
+                    key={c.id}
+                    className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm text-text transition-colors hover:bg-surface-muted"
+                  >
                     <input
                       type="checkbox"
-                      className="checkbox-input"
+                      className="h-4 w-4 accent-primary"
                       checked={!props.hiddenCourses.has(c.id)}
                       onChange={() => props.onToggleCourse(c.id)}
                     />
                     <span
-                      className="course-filter-dot"
+                      className="h-2.5 w-2.5 rounded-full"
                       style={{ background: courseTone(c.color).solid }}
                     />
                     <span>{c.code}</span>

@@ -102,10 +102,10 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
   }, [view, anchor]);
 
   return (
-    <div className="app-shell calendar-shell">
+    <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar active="calendar" calendarView={view} onCalendarViewChange={setView} />
 
-      <div className="main">
+      <div className="flex min-h-0 flex-1 flex-col">
         <CalendarToolbar
           period={period}
           onPrev={() => shift(-1)}
@@ -122,7 +122,7 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
           onToggleType={(t) => setHiddenTypes((s) => toggle(s, t))}
         />
 
-        <div className="calendar-body">
+        <div className="min-h-0 flex-1 overflow-hidden">
           {view === "week" && (
             <WeekView
               anchor={anchor}

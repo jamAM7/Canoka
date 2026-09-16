@@ -1,13 +1,20 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  // Files Tailwind will scan for class names. Keep this list up-to-date
+  // when adding new folders or file types so unused styles are purged.
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./styles/**/*.css",
   ],
+  // Centralized design tokens. These values are referenced throughout the
+  // app via Tailwind utilities (e.g. `text-primary`, `bg-surface`, `p-4`).
+  // Update here to keep styling consistent across components.
   theme: {
     extend: {
+      // Color palette (semantic + brand). Prefer semantic names in
+      // components (primary, surface, border) so tokens can swap easily.
       colors: {
         primary: "#023047",
         "primary-light": "#8ECAE6",
@@ -43,6 +50,8 @@ const config: Config = {
         lineSoft: "#E8ECEC",
       },
       spacing: {
+        // Common spacing scale used across layouts and components. Add
+        // descriptive tokens (e.g. `sidebar`, `navbar`) for fixed dims.
         1: "0.25rem",
         2: "0.5rem",
         3: "0.75rem",
@@ -58,11 +67,14 @@ const config: Config = {
         navbar: "72px",
       },
       fontFamily: {
-        sans: ["var(--font-karla)", "Karla", "Arial", "Helvetica", "sans-serif"],
-        body: ["var(--font-karla)", "Karla", "Arial", "Helvetica", "sans-serif"],
-        heading: ["var(--font-karla)", "Karla", "Arial", "Helvetica", "sans-serif"],
+        // We use the Karla variable injected by next/font. Keep only
+        // Karla + a generic fallback to avoid unexpected font swaps.
+        sans: ["var(--font-karla)", "Karla", "sans-serif"],
+        body: ["var(--font-karla)", "Karla", "sans-serif"],
+        heading: ["var(--font-karla)", "Karla", "sans-serif"],
       },
       fontSize: {
+        // Font-size scale (value + line-height). Use `text-sm`, `text-lg` etc.
         xs: ["0.75rem", { lineHeight: "1.2" }],
         sm: ["0.875rem", { lineHeight: "1.4" }],
         base: ["1rem", { lineHeight: "1.5" }],
@@ -73,17 +85,20 @@ const config: Config = {
         "4xl": ["3rem", { lineHeight: "1.2" }],
       },
       fontWeight: {
+        // Named font-weights to use via `font-regular`, `font-medium` etc.
         regular: "400",
         medium: "500",
         semibold: "600",
         bold: "700",
       },
       lineHeight: {
+        // Helpful semantic line-heights for body and headings.
         tight: "1.2",
         normal: "1.5",
         relaxed: "1.7",
       },
       borderRadius: {
+        // Border radius scale. Use descriptive names like `md` or `pill`.
         sm: "5px",
         md: "8px",
         lg: "12px",
@@ -91,6 +106,7 @@ const config: Config = {
         pill: "999px",
       },
       boxShadow: {
+        // Reusable shadows: `shadow-sm`, `shadow-md`, `shadow-focus`.
         sm: "0 1px 2px rgba(2, 48, 71, 0.06)",
         md: "0 4px 12px rgba(2, 48, 71, 0.08)",
         lg: "0 10px 25px rgba(2, 48, 71, 0.12)",
@@ -125,6 +141,7 @@ const config: Config = {
         normal: "ease",
       },
       screens: {
+        // Breakpoints used for responsive utilities (mobile → desktop).
         mobile: "640px",
         tablet: "900px",
         desktop: "1200px",

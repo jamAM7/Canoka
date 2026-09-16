@@ -54,24 +54,24 @@ export function WeekView({ anchor, events, courseById, onSelect }: Props) {
     );
 
   return (
-    <div className="calendar" style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, borderRadius: 0, border: 0 }}>
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Day header */}
-      <div className="time-grid-header">
-        <div />
+      <div className="flex items-start border-b border-border bg-background">
+        <div style={{ width: 72 }} />
         {days.map((day) => (
-          <div key={day.toISOString()} className="time-grid-header-cell">
-            <div className="time-grid-header-day">{format(day, "EEE")}</div>
-            <div className={`calendar-date ${isToday(day) ? "today" : ""}`} style={{ margin: "2px auto 0" }}>
+          <div key={day.toISOString()} className="flex-1 flex flex-col items-center p-2 text-center">
+            <div className="text-sm font-medium text-text-muted">{format(day, "EEE")}</div>
+            <div className={`text-sm mt-1 ${isToday(day) ? "font-semibold text-primary" : "text-text"}`}>
               {format(day, "d")}
             </div>
-            <div className="calendar-day-body" style={{ marginTop: 4 }}>
+            <div className="mt-1 flex flex-col gap-1 w-full">
               {dueByDay(day).map((ev) => {
                 const tone = courseTone(courseById.get(ev.courseId ?? "")?.color);
                 return (
                   <button
                     key={ev.id}
                     onClick={() => onSelect(ev.id)}
-                    className="due-flag"
+                    className="truncate rounded-md px-2 py-1 text-sm"
                     style={{ background: tone.bg, color: tone.fg }}
                     title={`Due: ${ev.title}`}
                   >
@@ -85,69 +85,66 @@ export function WeekView({ anchor, events, courseById, onSelect }: Props) {
       </div>
 
       {/* Time grid */}
-      <div ref={scrollRef} className="cb-scroll time-grid-scroll">
-        <div className="time-grid-body">
+      <div ref={scrollRef} className="cb-scroll overflow-auto" style={{ flex: 1 }}>
+        <div className="relative flex min-h-0">
           {/* Hour labels */}
-          <div className="time-grid-hours">
+          <div className="flex flex-col text-right pr-3" style={{ width: 72 }}>
             {HOURS.map((h) => (
-              <div key={h} style={{ height: HOUR_ROW_PX }} className="time-grid-hour-label">
-                {h === 0
-                  ? ""
-                  : format(new Date().setHours(h, 0), "h a").toLowerCase()}
+              <div key={h} style={{ height: HOUR_ROW_PX }} className="text-xs text-text-muted">
+                {h === 0 ? "" : format(new Date().setHours(h, 0), "h a").toLowerCase()}
               </div>
             ))}
           </div>
 
           {/* Day columns */}
-          {days.map((day) => {
-            const laid = layoutDayColumn(eventsOnDay(events, day));
-            return (
-              <div
-                key={day.toISOString()}
-                className="time-grid-day"
-                style={{ height: HOURS.length * HOUR_ROW_PX }}
-              >
-                {HOURS.map((h) => (
-                  <div key={h} style={{ height: HOUR_ROW_PX }} className="time-grid-hour-row" />
-                ))}
+          <div className="flex flex-1">
+            {days.map((day) => {
+              const laid = layoutDayColumn(eventsOnDay(events, day));
+              return (
+                <div
+                  key={day.toISOString()}
+                  className="relative flex-1 border-l last:border-r border-border-light"
+                  style={{ height: HOURS.length * HOUR_ROW_PX }}
+                >
+                  {HOURS.map((h) => (
+                    <div key={h} style={{ height: HOUR_ROW_PX }} className="border-b border-border-light" />
+                  ))}
 
-                {isToday(day) && <NowLine />}
+                  {isToday(day) && <NowLine />}
 
-                {laid.map(({ event, lane, lanes }) => {
-                  const { top, height } = gridPlacement(event, day);
-                  const tone = courseTone(courseById.get(event.courseId ?? "")?.color);
-                  const widthPct = 100 / lanes;
-                  return (
-                    <button
-                      key={event.id}
-                      onClick={() => onSelect(event.id)}
-                      style={{
-                        top,
-                        height,
-                        left: `calc(${lane * widthPct}% + 2px)`,
-                        width: `calc(${widthPct}% - 4px)`,
-                        background: tone.bg,
-                        borderColor: tone.border,
-                        color: tone.fg,
-                      }}
-                      className={`time-grid-event ${event.type === "task" ? "is-task" : ""} ${
-                        event.status === "done" ? "is-done" : ""
-                      }`}
-                    >
-                      <div className={`time-grid-event-title ${event.status === "done" ? "is-done" : ""}`}>
-                        {event.type === "assessment" && <span>◆</span>}
-                        <span className="truncate">{event.title}</span>
-                      </div>
-                      <div className="time-grid-event-meta truncate">
-                        {formatEventTime(event)}
-                        {event.location ? ` · ${event.location}` : ""}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })}
+                  {laid.map(({ event, lane, lanes }) => {
+                    const { top, height } = gridPlacement(event, day);
+                    const tone = courseTone(courseById.get(event.courseId ?? "")?.color);
+                    const widthPct = 100 / lanes;
+                    return (
+                      <button
+                        key={event.id}
+                        onClick={() => onSelect(event.id)}
+                        style={{
+                          top,
+                          height,
+                          left: `calc(${lane * widthPct}% + 6px)`,
+                          width: `calc(${widthPct}% - 12px)`,
+                          background: tone.bg,
+                          borderColor: tone.border,
+                          color: tone.fg,
+                        }}
+                        className={`absolute rounded-md border px-2 py-1 text-sm text-left overflow-hidden ${
+                          event.status === "done" ? "opacity-60" : ""
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {event.type === "assessment" && <span className="text-xs">◆</span>}
+                          <span className="truncate font-medium">{event.title}</span>
+                        </div>
+                        <div className="text-xs opacity-75 truncate">{formatEventTime(event)}{event.location ? ` · ${event.location}` : ""}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
