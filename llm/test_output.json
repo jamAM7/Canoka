@@ -1,0 +1,88 @@
+{
+  "course_id": "40940",
+  "assignment_title": "Assignment 1 - Project Pitch",
+  "due_date": "2026-08-21T23:59:59+10:00",
+  "subtasks": [
+    {
+      "id": "subtask_1",
+      "order": 1,
+      "title": "Download and review pitch template",
+      "description": "Access MS Teams > General > Files > 2. Assessment templates and download the Project Pitch template. Read through all slides and sections to understand the required structure and content.",
+      "estimated_minutes": 20,
+      "due_date": "2026-08-07T23:59:59+10:00",
+      "completed": false
+    },
+    {
+      "id": "subtask_2",
+      "order": 2,
+      "title": "Define project scope and target users",
+      "description": "As a team, clearly define and agree on what the project does (scope) and who the intended users are. Write these up in 2\u20133 concise sentences each ready to be placed into the slides.",
+      "estimated_minutes": 60,
+      "due_date": "2026-08-09T23:59:59+10:00",
+      "completed": false
+    },
+    {
+      "id": "subtask_3",
+      "order": 3,
+      "title": "Research and define the target market",
+      "description": "Identify and document why the target market needs this solution, including market size, pain points, and opportunity. Summarise key findings into bullet points suitable for a pitch slide.",
+      "estimated_minutes": 90,
+      "due_date": "2026-08-11T23:59:59+10:00",
+      "completed": false
+    },
+    {
+      "id": "subtask_4",
+      "order": 4,
+      "title": "Outline expected prototype and achievements",
+      "description": "As a team, agree on what the prototype will look like and what will be achieved by the end of the project. Document these as clear, measurable outcomes for inclusion in the slides.",
+      "estimated_minutes": 45,
+      "due_date": "2026-08-12T23:59:59+10:00",
+      "completed": false
+    },
+    {
+      "id": "subtask_5",
+      "order": 5,
+      "title": "Draft full slide deck using template",
+      "description": "Populate the downloaded pitch template with all agreed content covering project scope, users, target market, and expected prototype/achievements. Ensure all template sections are filled and slide count is appropriate for a 3\u20135 min talk.",
+      "estimated_minutes": 120,
+      "due_date": "2026-08-14T23:59:59+10:00",
+      "completed": false
+    },
+    {
+      "id": "subtask_6",
+      "order": 6,
+      "title": "Conduct internal team review of slides",
+      "description": "Share the draft slides with all team members for feedback on content accuracy, clarity, and completeness. Collect and consolidate all feedback into a list of agreed changes.",
+      "estimated_minutes": 45,
+      "due_date": "2026-08-16T23:59:59+10:00",
+      "completed": false
+    },
+    {
+      "id": "subtask_7",
+      "order": 7,
+      "title": "Revise and finalise slide deck",
+      "description": "Apply all feedback from the team review to produce a polished, final version of the slide deck. Check formatting, spelling, and that the deck fits within the 3\u20135 minute timing.",
+      "estimated_minutes": 60,
+      "due_date": "2026-08-17T23:59:59+10:00",
+      "completed": false
+    },
+    {
+      "id": "subtask_8",
+      "order": 8,
+      "title": "Rehearse pitch as a team",
+      "description": "Run at least one full timed rehearsal of the 3\u20135 minute pitch as a team, practising transitions and Q&A responses. Adjust slide content or speaker notes as needed based on the rehearsal.",
+      "estimated_minutes": 60,
+      "due_date": "2026-08-18T23:59:59+10:00",
+      "completed": false
+    },
+    {
+      "id": "subtask_9",
+      "order": 9,
+      "title": "Upload slides to MS Teams by deadline",
+      "description": "Upload the final slide deck to MS Teams > General > Files > 4. Project Showcase > 1. Pitch before 23:59 on 20 Aug 2026. Confirm the file is visible and accessible to the teaching team.",
+      "estimated_minutes": 10,
+      "due_date": "2026-08-20T23:59:59+10:00",
+      "completed": false
+    }
+  ]
+}
