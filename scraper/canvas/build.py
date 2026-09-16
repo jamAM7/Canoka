@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote
@@ -12,6 +13,11 @@ from .client import CanvasClient, CanvasError, CanvasForbidden
 from .content import extract_links, file_to_text, html_to_markdown
 
 CODE_RE = re.compile(r"\b(\d{5})\b")
+
+# Enough to hide the latency of a page-at-a-time index without leaning on the
+# rate limiter. The client still spaces requests, so this shortens waiting
+# rather than raising the request rate much above what it already was.
+MAX_WORKERS = 6
 
 
 def slugify(value: str, limit: int = 60) -> str:
@@ -104,6 +110,29 @@ class SubjectBuilder:
 
     # ------------------------------------------------------------------ utils
 
+    def _fetch_many(self, keys: list, fetch) -> dict:
+        """Run one-request-per-key lookups concurrently. Returns {key: result}.
+
+        Page bodies and file metadata are the two places where the request
+        count is fixed — Canvas won't include either on its index — so the only
+        thing left to shorten is the waiting. The client paces and counts
+        requests under a lock, so the ceiling here is politeness, not safety.
+
+        Keyed by what was asked for rather than by anything in the response,
+        since Canvas doesn't reliably echo the slug back. Callers iterate their
+        own key order, so two runs of a subject produce the same bytes.
+        Failures are absent from the mapping, and every mutation of shared
+        build state happens afterwards on the caller's thread.
+        """
+        if not keys:
+            return {}
+        if len(keys) == 1:
+            found = fetch(keys[0])
+            return {keys[0]: found} if found is not None else {}
+        with ThreadPoolExecutor(max_workers=min(MAX_WORKERS, len(keys))) as pool:
+            results = pool.map(fetch, keys)
+            return {key: found for key, found in zip(keys, results) if found is not None}
+
     def _safe(self, name: str, fn, default):
         """Run one endpoint. A hidden tab must not kill the whole subject."""
         try:
@@ -125,6 +154,47 @@ class SubjectBuilder:
         count = len(value) if hasattr(value, "__len__") else 1
         self.coverage[name] = {"status": "ok", "count": count}
         return value
+
+    def _record_file_coverage(self, files: list[dict]) -> None:
+        """Say so when files were recovered from links after the tab 403'd.
+
+        Same shape as the disabled-Pages fallback: leaving the status at
+        `forbidden` next to a populated files[] would read as a contradiction,
+        and leaving it at `ok` would hide that the listing was never available.
+        """
+        listing = self.coverage.get("files") or {}
+        if listing.get("status") == "ok" or not files:
+            return
+        self.coverage["files"] = {
+            "status": "partial",
+            "count": len(files),
+            "note": (f"Files tab unavailable ({listing.get('note', 'no listing')}); "
+                     f"{len(files)} file(s) recovered from links in briefs and pages, "
+                     "so this is what is reachable rather than everything the subject has"),
+        }
+
+    @staticmethod
+    def _flatten_inline_links(document: dict) -> None:
+        """Reduce the per-item link lists to bare URLs.
+
+        Every one of these was a full record duplicating an entry in links[],
+        which already carries the label, the kind and where it was found. Runs
+        after _all_links has read them; resolve a URL by looking it up there.
+        """
+        def flatten(holder: dict) -> None:
+            links = holder.get("links")
+            if isinstance(links, list):
+                holder["links"] = [link["url"] for link in links if isinstance(link, dict)]
+
+        subject = document["subject"]
+        subject["syllabus_links"] = [link["url"] for link in subject.get("syllabus_links") or []
+                                     if isinstance(link, dict)]
+        for section in ("assessments", "quizzes", "pages", "announcements", "discussions"):
+            for item in document.get(section) or []:
+                flatten(item)
+        for module in document.get("modules") or []:
+            for item in module.get("items") or []:
+                flatten(item)
 
     def _record_assessment_content(self, assessments: list[dict]) -> None:
         """Roll the per-assessment provenance up into the coverage block.
@@ -177,6 +247,33 @@ class SubjectBuilder:
 
     # ------------------------------------------------------------------ files
 
+    def _write_markdown(self, source: Path, record: dict) -> None:
+        """Write a converted file out as its own .md beside the download.
+
+        The text is in the JSON already, but that is the storage layer: you
+        cannot open it, diff it, or hand one reading to a prompt on its own. A
+        40-page PDF also has no business being inlined into every module view
+        that links it — the same reason pages are stored once and pointed at.
+
+        Named from the download's stem, so the file id prefix keeps it unique,
+        and written with no timestamp so a re-run produces the same bytes.
+        """
+        extracted = record.get("extracted") or {}
+        if extracted.get("status") != "ok" or not extracted.get("text"):
+            return
+        dest = source.with_suffix(".md")
+        # A file that arrived as .md is already what we would be writing, and
+        # `dest` is the download itself. Converting it would overwrite the
+        # original with a header and a re-indented copy of its own body.
+        if dest == source:
+            return
+        header = [f"# {record.get('name')}", "", f"Source: {record.get('url')}"]
+        if extracted.get("truncated"):
+            header += ["", f"_Truncated at {len(extracted['text'])} characters._"]
+        dest.write_text("\n".join(header) + "\n\n" + extracted["text"].strip() + "\n",
+                        encoding="utf-8")
+        record["markdown_path"] = str(dest.relative_to(self.out_dir))
+
     def _handle_file(self, file_obj: dict) -> dict:
         """Metadata for a Canvas file, plus local copy and text if requested."""
         file_id = str(file_obj.get("id"))
@@ -218,29 +315,44 @@ class SubjectBuilder:
                     self._sha_index[record["sha256"]] = file_id
                     if self.extract:
                         record["extracted"] = file_to_text(dest, ocr=self.ocr)
+                        self._write_markdown(dest, record)
             except Exception as exc:
                 record["download_error"] = str(exc)[:200]
 
         self._file_cache[file_id] = record
         return record
 
-    def _attachments_for(self, html: str | None) -> list[dict]:
-        """Resolve /files/<id> links inside a brief into real file records."""
-        attachments = []
+    def _attachments_for(self, html: str | None) -> list[str]:
+        """File ids for the /files/<id> links inside a brief or page body.
+
+        Ids rather than records, resolved against files[]. The same file is
+        routinely linked from several pages, and inlining the record copied its
+        metadata — and, with --extract, its whole extracted text — once per
+        reference. Same reason module items point at pages instead of carrying
+        a second copy of the body.
+
+        Metadata lookups are one request each and independent, so they run
+        concurrently; order is restored afterwards to keep runs comparable.
+        """
+        wanted: list[str] = []
         for link in self._links(html):
             match = re.search(r"/files/(\d+)", link["url"])
-            if not match:
-                continue
-            file_id = match.group(1)
-            if file_id in self._file_cache:
-                attachments.append(self._file_cache[file_id])
-                continue
-            try:
-                file_obj, _ = self.client.get(f"/api/v1/files/{file_id}")
-            except CanvasError:
-                continue
-            attachments.append(self._handle_file(file_obj))
-        return attachments
+            if match and match.group(1) not in wanted:
+                wanted.append(match.group(1))
+
+        missing = [fid for fid in wanted if fid not in self._file_cache]
+        found = self._fetch_many(missing, self._fetch_file)
+        for file_id in missing:
+            if file_id in found:
+                self._handle_file(found[file_id])
+        return [fid for fid in wanted if fid in self._file_cache]
+
+    def _fetch_file(self, file_id: str) -> dict | None:
+        try:
+            file_obj, _ = self.client.get(f"/api/v1/files/{file_id}")
+        except CanvasError:
+            return None
+        return file_obj
 
     # ------------------------------------------------------------------ build
 
@@ -302,13 +414,20 @@ class SubjectBuilder:
         # the item's page_url — storing it in both places doubled every page.
         self._link_pages(modules, {p["url_slug"]: p for p in pages if p.get("url_slug")})
 
-        files = self._safe(
+        self._safe(
             "files",
             lambda: [self._handle_file(f) for f in self.client.get_list(self._course_path("files"))],
             [],
         )
-        announcements = self._safe("announcements", self._announcements, [])
-        discussions = self._safe("discussions", self._discussions, [])
+        topics = self._safe("announcements", self._topics, [])
+        announcements = self._announcements(topics)
+        discussions = self._discussions(topics)
+        # One endpoint serves both sections, so its outcome applies to both.
+        # Counts stay per-section; a hidden tab carries the same note to each.
+        outcome = self.coverage.pop("announcements")
+        for section, rows in (("announcements", announcements), ("discussions", discussions)):
+            self.coverage[section] = ({**outcome, "count": len(rows)}
+                                      if outcome.get("status") == "ok" else dict(outcome))
         tabs = self._safe(
             "tabs",
             lambda: [
@@ -364,7 +483,13 @@ class SubjectBuilder:
             "pages": pages,
             "announcements": announcements,
             "discussions": discussions,
-            "files": files,
+            # Every file seen anywhere, not just the ones the Files tab listed.
+            # When staff hide that tab the listing 403s, and files[] used to come
+            # back empty while dozens sat linked inside briefs and pages — the
+            # subject read as having no readings when it had plenty. The cache
+            # is the union of the listing and every inline discovery, so
+            # building from it is also order-independent.
+            "files": list(self._file_cache.values()),
             "external_tools": tools,
             "tabs": tabs,
             "links": self._all_links(assessments, quizzes, modules, pages, announcements, syllabus_html),
@@ -375,10 +500,15 @@ class SubjectBuilder:
                 "grading_rule": grading_rule,
                 "files_downloaded": self.download,
                 "text_extracted": self.extract,
-            "ocr": self.ocr,
+                "ocr": self.ocr,
                 "coverage": self.coverage,
             },
         }
+        self._record_file_coverage(document["files"])
+        # Links are indexed before the inline copies are reduced to bare URLs:
+        # _all_links reads the full records, and everything after this point
+        # reads the index instead.
+        self._flatten_inline_links(document)
         document["overview_markdown"] = self._overview(document)
         return document
 
@@ -396,6 +526,7 @@ class SubjectBuilder:
                 due_at = assignment.get("due_at") or detail.get("due_at") or next(
                     (d["due_at"] for d in all_dates if d.get("due_at")), None
                 )
+                rubric = self._rubric(assignment)
                 out.append(
                     {
                         "id": str(assignment.get("id")),
@@ -423,9 +554,9 @@ class SubjectBuilder:
                         "grading_type": assignment.get("grading_type"),
                         "published": assignment.get("published"),
                         "brief": self._markdown(description),
-                        "rubric": self._rubric(assignment),
+                        "rubric": rubric,
                         "content_status": self._content_status(
-                            assignment, description, self._rubric(assignment)),
+                            assignment, description, rubric),
                         "links": self._links(description),
                         "attachments": self._attachments_for(description),
                         "my_submission": {
@@ -502,11 +633,12 @@ class SubjectBuilder:
         }
 
     def _fetch_page(self, slug: str) -> dict | None:
+        """The raw page object for one slug. No shared state, so pool-safe."""
         try:
             full, _ = self.client.get(self._course_path(f"pages/{quote(str(slug))}"))
         except CanvasError:
             return None
-        return self._page_record(full, full.get("body"))
+        return full
 
     def _pages(self, fallback_slugs: list[str]) -> list[dict]:
         """Every page body, with a fallback for a disabled Pages index.
@@ -515,11 +647,18 @@ class SubjectBuilder:
         readable. Module items still name them, so the content is recoverable
         one slug at a time. Sets its own coverage entry rather than going
         through _safe, because "partial" is a real outcome here.
+
+        The index carries no bodies, so it is one request per page either way.
+        Those are fetched concurrently; the records are then built in index
+        order on this thread, because building one resolves its attachments and
+        that touches shared state.
         """
         try:
             stubs = self.client.get_list(self._course_path("pages"))
         except CanvasError as exc:
-            pages = [p for p in (self._fetch_page(s) for s in fallback_slugs) if p]
+            found = self._fetch_many(fallback_slugs, self._fetch_page)
+            pages = [self._page_record(found[slug], found[slug].get("body"))
+                     for slug in fallback_slugs if slug in found]
             self.coverage["pages"] = {
                 "status": "partial" if pages else "forbidden",
                 "count": len(pages),
@@ -528,17 +667,9 @@ class SubjectBuilder:
             }
             return pages
 
-        pages = []
-        for stub in stubs:
-            slug = stub.get("url")
-            body = None
-            if slug:
-                try:
-                    full, _ = self.client.get(self._course_path(f"pages/{quote(str(slug))}"))
-                    body = full.get("body")
-                except CanvasError:
-                    body = None
-            pages.append(self._page_record(stub, body))
+        found = self._fetch_many([s["url"] for s in stubs if s.get("url")], self._fetch_page)
+        pages = [self._page_record(stub, (found.get(stub.get("url")) or {}).get("body"))
+                 for stub in stubs]
         self.coverage["pages"] = {"status": "ok", "count": len(pages)}
         return pages
 
@@ -613,10 +744,15 @@ class SubjectBuilder:
         modules.sort(key=lambda m: m.get("position") or 0)
         return modules
 
-    def _announcements(self) -> list[dict]:
-        topics = self.client.get_list(
-            self._course_path("discussion_topics"), {"only_announcements": "true"}
-        )
+    def _topics(self) -> list[dict]:
+        """Announcements and discussions come from one endpoint, so fetch once.
+
+        Asking twice — once with only_announcements — is two full paginated
+        walks and two cache entries for the same rows.
+        """
+        return self.client.get_list(self._course_path("discussion_topics"))
+
+    def _announcements(self, topics: list[dict]) -> list[dict]:
         return [
             {
                 "title": t.get("title"),
@@ -628,10 +764,10 @@ class SubjectBuilder:
                 "url": t.get("html_url"),
             }
             for t in topics
+            if t.get("is_announcement")
         ]
 
-    def _discussions(self) -> list[dict]:
-        topics = self.client.get_list(self._course_path("discussion_topics"))
+    def _discussions(self, topics: list[dict]) -> list[dict]:
         return [
             {
                 "title": t.get("title"),

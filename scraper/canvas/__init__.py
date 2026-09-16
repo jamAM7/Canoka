@@ -2,6 +2,7 @@
 
 from .client import CanvasClient, CanvasError, CanvasForbidden, CanvasNotFound
 from .build import SubjectBuilder, slugify, subject_code
+from .render import module_slices, render_module, render_subject, week_label
 
 __all__ = [
     "CanvasClient",
@@ -11,4 +12,8 @@ __all__ = [
     "SubjectBuilder",
     "slugify",
     "subject_code",
+    "module_slices",
+    "render_module",
+    "render_subject",
+    "week_label",
 ]

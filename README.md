@@ -47,7 +47,10 @@ Canoka pulls course content and deadlines from Canvas, turns them into organised
 │   ├── supabase/                # Browser + server Supabase clients
 │   ├── canvas/                  # Canvas API wrapper
 │   └── ai/                      # AI provider wrapper (notes/quiz generation)
+├── styles/                      # Global stylesheets imported by app/layout.tsx
 ├── types/                       # Shared TypeScript types
+├── scraper/                     # Python: Canvas -> JSON + markdown corpus (see below)
+├── llm/                         # Python: assessment -> subtasks via the Claude API (see below)
 ├── supabase/
 │   ├── migrations/               # SQL schema, source of truth for the DB
 │   └── seed.sql
@@ -82,3 +85,58 @@ cp .env.example .env.local
 | `CANVAS_BASE_URL` | Your institution's Canvas URL, e.g. `https://canvas.uts.edu.au` |
 | `CANVAS_API_TOKEN` | Canvas → Account → Settings → New Access Token |
 | `AI_API_KEY` | Your AI provider's API key |
+
+## Canvas scraper
+
+Pulls a student's Canvas subjects into a local corpus: one JSON document per
+subject for code to query, plus the markdown views you actually put in a
+prompt.
+
+```
+scraper/out/
+  index.json                                # every subject, its views, coverage gaps
+  41201-....json                            # the queryable document
+  41201-....md                              # subject overview, for a prompt
+  41201-....week-3-systems-thinking.md      # one per module, for a prompt
+  files/41201-.../13473995_Tutorial 7.pdf   # with --download
+  files/41201-.../13473995_Tutorial 7.md    # with --extract
+```
+
+A whole subject is roughly 100k tokens of JSON. The module view for the week
+being asked about is roughly 1k. Only the second belongs in a request.
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r scraper/requirements.txt
+cp scraper/.env.example scraper/.env    # add CANVAS_BASE_URL and CANVAS_API_TOKEN
+
+cd scraper
+../.venv/bin/python scrape.py                       # JSON + markdown views
+../.venv/bin/python scrape.py --download --extract  # also convert attachments
+../.venv/bin/python selftest.py                     # no network, no token needed
+```
+
+On Windows the venv puts things elsewhere, but nothing else changes:
+
+```
+py -m venv .venv
+.venv\Scripts\pip install -r scraper\requirements.txt
+```
+
+The requirements file installs correctly on every platform without editing.
+[scraper/README.md](scraper/README.md) covers why, along with the document
+schema, the markdown views, attachment conversion, coverage reporting, and
+every flag.
+
+Read `out/index.json` for the subject list. Each entry names its JSON document
+and its `views`, in filename order: the subject overview first, then one per
+module. Load the view you need and send that, not the JSON. The views render
+deterministically, with no timestamps and no set iteration, so the same module
+produces the same bytes every run. That is what makes them safe to sit behind a
+prompt-cache breakpoint.
+
+## LLM subtask generation
+
+`llm/generate_subtasks.py` reads a subject JSON from `scraper/out/` and asks
+Claude to break an assessment into ordered subtasks, written to
+`llm/test_output.json`. See [llm/README.md](llm/README.md) for setup.

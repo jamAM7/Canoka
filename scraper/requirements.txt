@@ -2,13 +2,24 @@
 requests>=2.31
 beautifulsoup4>=4.12
 markdownify>=0.13
+# Windows ships no system timezone database, so zoneinfo has nothing to read
+# and every --timezone lookup fails. macOS and Linux already have one, hence
+# the marker: pip installs this only where it is actually missing.
+tzdata>=2024.1; sys_platform == "win32"
 
 # optional — only needed for --extract (text out of downloaded files)
+# pymupdf4llm converts PDFs to real markdown (headings, pipe tables); pypdf is
+# the fallback when it is absent, and gives flat text instead. It is a large
+# install (~220 MB with onnxruntime and numpy) — drop it if that hurts.
+pymupdf4llm>=0.0.17
 pypdf>=4.0
 python-pptx>=0.6.23
 python-docx>=1.1
 openpyxl>=3.1
 
 # optional — only needed for --ocr (scanned PDFs, macOS only)
-# pyobjc-framework-Vision>=10.0
-# pyobjc-framework-Quartz>=10.0
+# Environment markers rather than commented-out lines: pip skips these off
+# macOS instead of failing on them, so one `pip install -r requirements.txt`
+# works on every platform with no editing first.
+pyobjc-framework-Vision>=10.0; sys_platform == "darwin"
+pyobjc-framework-Quartz>=10.0; sys_platform == "darwin"
