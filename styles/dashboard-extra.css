@@ -1,0 +1,163 @@
+/* =========================================================
+   DASHBOARD — APP-SPECIFIC ADDITIONS
+   Only the three things the README assigns to the dashboard:
+   notifications, "due this week", and quick links into notes.
+   Built from variables.css tokens — no new hex values.
+   ========================================================= */
+
+.dashboard-header {
+    padding: var(--page-padding) var(--page-padding) 0;
+}
+
+.dashboard-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    padding: var(--page-padding);
+}
+
+.dashboard-columns {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: var(--space-6);
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .dashboard-columns {
+        grid-template-columns: 1fr;
+    }
+}
+
+.deadline-list,
+.notification-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.deadline-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: var(--border-width) solid var(--color-border-light);
+}
+
+.deadline-row:last-child {
+    border-bottom: 0;
+}
+
+.deadline-main {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
+}
+
+.deadline-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+}
+
+.deadline-text {
+    min-width: 0;
+}
+
+.deadline-title {
+    font-weight: var(--font-weight-semibold);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.deadline-course {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.notification-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: var(--border-width) solid var(--color-border-light);
+}
+
+.notification-row:last-child {
+    border-bottom: 0;
+}
+
+.notification-icon {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border-radius: 50%;
+    font-size: var(--font-size-sm);
+}
+
+.notification-icon.overdue {
+    background: #F8E1E1;
+    color: var(--color-error);
+}
+
+.notification-icon.soon {
+    background: #FFF0C7;
+    color: #805A00;
+}
+
+.notification-text {
+    min-width: 0;
+}
+
+.notification-title {
+    font-weight: var(--font-weight-medium);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.notification-meta {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.subject-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+}
+
+.subject-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+
+    padding: var(--space-2) var(--space-4);
+
+    border: var(--border-width) solid var(--color-border-light);
+    border-radius: var(--radius-pill);
+
+    color: var(--color-text);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+
+    transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.subject-link:hover {
+    border-color: var(--color-primary-light);
+    background: var(--color-surface-muted);
+}
+
+.subject-link-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+}
