@@ -24,8 +24,8 @@ to built, rather than trusting the README alone to reflect reality.
 | **AI integration** (`lib/ai`) | Note generation | Not started |
 
 Nothing is wired to a real backend yet — Calendar and Dashboard both run on
-the same in-memory mock dataset (`lib/calendar/mock-data.ts`), and none of it
-is persisted.
+the same mock dataset (`lib/calendar/mock-data.ts`). Calendar edits are kept
+in the browser's localStorage only (see section 4).
 
 ---
 
@@ -90,16 +90,26 @@ no icon library dependency.
   and assessment due-date flags in the day header.
 - **MonthView** — Monday-first month grid, up to 3 events per day + "N more",
   click a day to jump into that week.
-- **KanbanView** — **four** columns (`Coming Up`, `Not Started`,
-  `In Progress`, `Completed`), native drag-and-drop, overdue highlighting.
-  Only assessments and tasks appear here — classes have no status.
-- **EventDetail** — right-hand slide-over with status controls and a
-  subtask checklist; tasks (including AI-generated subtasks) get an inline
-  date/time editor so a student can reschedule them, while classes and
-  assessment due dates stay read-only.
+- **KanbanView** — starts with four columns (`Coming Up`, `Not Started`,
+  `In Progress`, `Completed`). Students can add, rename and delete columns;
+  each column counts as one of those four statuses (every status keeps at
+  least one column), so week/month views keep reading `status`. Cards drag
+  between and within columns, and "Add a card" creates a task booked for the
+  next hour so it also shows in the calendar. Only assessments and tasks
+  appear here — classes have no status.
+- **CardEditor** — one editor for assessments and tasks, used in two places
+  so a card reads and edits the same everywhere: the Kanban board's modal
+  (`KanbanCardModal`, two columns) and the week/month right-hand slide-over
+  (`EventDetail`, one column). It covers column, priority, notes, checklist,
+  labels and the subtask list (tick off, open, or re-time each subtask), and
+  for tasks also title, subject, due date, calendar time and delete.
+  Assessment title/subject/dates stay read-only (Canvas-owned). Classes have
+  no card, so `EventDetail` shows them as a read-only summary.
 
-Status changes and reschedules are held in local component state only —
-nothing persists across a reload yet.
+Status changes, reschedules, new tasks, card details and board columns are
+saved to this browser's localStorage (`lib/calendar/storage.ts`, key
+`canoka.calendar.v1`) until Supabase replaces it. The dashboard still reads
+the mock data directly, so it doesn't see those edits.
 
 ---
 

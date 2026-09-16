@@ -1,4 +1,4 @@
-// Small stroke icons for the app shell. Plain inline SVG so the shell has no
+// Small stroke icons shared across the app. Plain inline SVG so there is no
 // icon-library dependency — currentColor throughout so they inherit nav/button color.
 
 type IconProps = { className?: string };
@@ -56,6 +56,39 @@ export function ChevronIcon({ className, dir = "left" }: IconProps & { dir?: "le
   return (
     <svg {...base} width={16} height={16} className={className} aria-hidden="true">
       <path d={dir === "left" ? "M14.5 5.5 9 12l5.5 6.5" : "M9.5 5.5 15 12l-5.5 6.5"} />
+    </svg>
+  );
+}
+
+export function PlusIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+export function MoreIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M5.5 12h.01M12 12h.01M18.5 12h.01" strokeWidth="3" />
+    </svg>
+  );
+}
+
+export function ChecklistIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3.5" y="3.5" width="17" height="17" rx="2.5" />
+      <path d="M8 12.5l2.5 2.5L16 9.5" />
+    </svg>
+  );
+}
+
+export function CloseIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18" />
     </svg>
   );
 }

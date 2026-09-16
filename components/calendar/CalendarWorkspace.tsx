@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   addMonths,
   addWeeks,
@@ -14,14 +14,28 @@ import type {
   CalendarEventType,
   CalendarViewMode,
   Course,
+  KanbanBoard,
   TaskStatus,
 } from "@/types/calendar";
 import { WEEK_OPTS } from "@/lib/calendar/event-utils";
+import {
+  DEFAULT_BOARD,
+  addColumn,
+  createTask,
+  isOnlyColumnFor,
+  moveCard,
+  removeColumn,
+  renameColumn,
+  resolveBoard,
+  setColumnStatus,
+} from "@/lib/calendar/kanban";
+import { loadCalendar, saveCalendar } from "@/lib/calendar/storage";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { CalendarToolbar } from "./CalendarToolbar";
 import { WeekView } from "./WeekView";
 import { MonthView } from "./MonthView";
-import { KanbanView } from "./KanbanView";
+import { KanbanView, type BoardColumn } from "./KanbanView";
+import { KanbanCardModal } from "./KanbanCardModal";
 import { EventDetail } from "./EventDetail";
 
 interface Props {
@@ -36,6 +50,33 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
   const [view, setView] = useState<CalendarViewMode>("week");
   const [anchor, setAnchor] = useState<Date>(new Date());
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [board, setBoard] = useState<KanbanBoard>(DEFAULT_BOARD);
+
+  // Restore the student's saved calendar after mount (localStorage doesn't
+  // exist during server rendering), then save whenever events or the board
+  // change. The first save pass is skipped: it would only write back what was
+  // just restored, or freeze the mock data before anything was edited.
+  const [restored, setRestored] = useState(false);
+  const skipNextSave = useRef(true);
+
+  useEffect(() => {
+    const saved = loadCalendar();
+    if (saved) {
+      setEvents(saved.events);
+      setBoard(saved.board);
+    }
+    setRestored(true);
+  }, []);
+
+  useEffect(() => {
+    if (!restored) return;
+    if (skipNextSave.current) {
+      skipNextSave.current = false;
+      return;
+    }
+    saveCalendar({ events, board });
+  }, [restored, events, board]);
 
   const [hiddenCourses, setHiddenCourses] = useState<Set<string>>(new Set());
   const [hiddenTypes, setHiddenTypes] = useState<Set<CalendarEventType>>(
@@ -67,16 +108,77 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
     );
   }
 
-  function setStatus(id: string, status: TaskStatus) {
+  function updateEvent(id: string, patch: Partial<CalendarEvent>) {
     setEvents((cur) =>
-      cur.map((ev) => (ev.id === id ? { ...ev, status } : ev)),
+      cur.map((ev) => (ev.id === id ? { ...ev, ...patch } : ev)),
     );
   }
 
-  function reschedule(id: string, start: string, end: string) {
-    setEvents((cur) =>
-      cur.map((ev) => (ev.id === id ? { ...ev, start, end } : ev)),
-    );
+  function setStatus(id: string, status: TaskStatus) {
+    updateEvent(id, { status });
+  }
+
+  // ----- Kanban board -----
+
+  const resolvedBoard = useMemo(() => resolveBoard(events, board), [events, board]);
+
+  const boardColumns = useMemo<BoardColumn[]>(() => {
+    const visible = new Set(visibleEvents.map((ev) => ev.id));
+    return board.columns.map((column) => ({
+      column,
+      cards: (resolvedBoard.get(column.id) ?? []).filter((ev) => visible.has(ev.id)),
+      locked: isOnlyColumnFor(board, column.id),
+    }));
+  }, [board, resolvedBoard, visibleEvents]);
+
+  function moveToColumn(id: string, columnId: string, beforeId: string | null) {
+    const column = board.columns.find((c) => c.id === columnId);
+    if (!column) return;
+    setBoard(moveCard(events, board, id, columnId, beforeId));
+    setStatus(id, column.status);
+  }
+
+  function addTask(columnId: string, title: string) {
+    const column = board.columns.find((c) => c.id === columnId);
+    if (!column) return;
+    const task = createTask(title, column.status);
+    const next = [...events, task];
+    setEvents(next);
+    setBoard(moveCard(next, board, task.id, columnId, null));
+  }
+
+  function deleteEvent(id: string) {
+    setEvents((cur) => cur.filter((ev) => ev.id !== id));
+    setEditingId(null);
+    setSelectedId(null);
+  }
+
+  function changeColumnStatus(columnId: string, status: TaskStatus) {
+    if (isOnlyColumnFor(board, columnId)) return;
+    const ids = new Set((resolvedBoard.get(columnId) ?? []).map((ev) => ev.id));
+    setBoard(setColumnStatus(board, columnId, status));
+    setEvents((cur) => cur.map((ev) => (ids.has(ev.id) ? { ...ev, status } : ev)));
+  }
+
+  const closeDetail = useCallback(() => setSelectedId(null), []);
+  const closeEditor = useCallback(() => setEditingId(null), []);
+  const editing = editingId ? events.find((e) => e.id === editingId) ?? null : null;
+
+  // What the card editor needs for an event; shared by the week/month side
+  // panel and the board's modal so a card edits the same in both.
+  function editorProps(ev: CalendarEvent | null) {
+    return {
+      courses,
+      parent: ev?.parentId ? events.find((e) => e.id === ev.parentId) ?? null : null,
+      subtasks: ev ? events.filter((e) => e.parentId === ev.id) : [],
+      columns: board.columns,
+      columnId: ev
+        ? board.columns.find((col) => resolvedBoard.get(col.id)?.some((c) => c.id === ev.id))?.id ?? null
+        : null,
+      onChange: updateEvent,
+      onMove: (id: string, columnId: string) => moveToColumn(id, columnId, null),
+      onDelete: deleteEvent,
+    };
   }
 
   function toggle<T>(set: Set<T>, value: T): Set<T> {
@@ -105,7 +207,9 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar active="calendar" calendarView={view} onCalendarViewChange={setView} />
 
-      <div className="flex min-h-0 flex-1 flex-col">
+      {/* min-w-0 on Kanban keeps a board wider than the screen scrolling inside
+          itself instead of stretching the page past the viewport. */}
+      <div className={`flex min-h-0 flex-1 flex-col ${view === "kanban" ? "min-w-0" : ""}`}>
         <CalendarToolbar
           period={period}
           onPrev={() => shift(-1)}
@@ -122,7 +226,8 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
           onToggleType={(t) => setHiddenTypes((s) => toggle(s, t))}
         />
 
-        <div className="min-h-0 flex-1 overflow-hidden">
+        {/* A flex column, so each view can fill the remaining height and scroll inside it. */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {view === "week" && (
             <WeekView
               anchor={anchor}
@@ -145,10 +250,15 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
           )}
           {view === "kanban" && (
             <KanbanView
-              events={visibleEvents}
+              columns={boardColumns}
               courseById={courseById}
-              onSelect={setSelectedId}
-              onStatusChange={setStatus}
+              onOpen={setEditingId}
+              onMove={moveToColumn}
+              onAddTask={addTask}
+              onAddColumn={(title, status) => setBoard((b) => addColumn(b, title, status))}
+              onRenameColumn={(id, title) => setBoard((b) => renameColumn(b, id, title))}
+              onChangeColumnStatus={changeColumnStatus}
+              onRemoveColumn={(id) => setBoard((b) => removeColumn(b, id))}
             />
           )}
         </div>
@@ -156,21 +266,16 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
 
       <EventDetail
         event={selected}
-        course={selected?.courseId ? courseById.get(selected.courseId) : undefined}
-        parent={
-          selected?.parentId
-            ? events.find((e) => e.id === selected.parentId) ?? null
-            : null
-        }
-        subtasks={
-          selected
-            ? events.filter((e) => e.parentId === selected.id)
-            : []
-        }
-        onClose={() => setSelectedId(null)}
-        onStatusChange={setStatus}
-        onReschedule={reschedule}
+        {...editorProps(selected)}
+        onClose={closeDetail}
         onSelect={setSelectedId}
+      />
+
+      <KanbanCardModal
+        event={editing}
+        {...editorProps(editing)}
+        onClose={closeEditor}
+        onSelect={setEditingId}
       />
     </div>
   );
