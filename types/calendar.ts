@@ -12,6 +12,14 @@ export type CalendarEventType = "class" | "assessment" | "task";
 
 export type TaskStatus = "coming_up" | "todo" | "in_progress" | "done";
 
+export type TaskPriority = "low" | "medium" | "high";
+
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
 export interface Course {
   id: string;
   /** Short code shown on event chips, e.g. "31251". */
@@ -46,6 +54,26 @@ export interface CalendarEvent {
   parentId?: string;
   /** Hard deadline for assessments/tasks (may differ from `start`/`end`). */
   dueDate?: string;
+  /** Kanban card details the student adds to assessments and tasks. */
+  priority?: TaskPriority;
+  labels?: string[];
+  checklist?: ChecklistItem[];
 }
 
 export type CalendarViewMode = "week" | "month" | "kanban";
+
+/**
+ * A Kanban column. Students can add and rename columns, but each one counts as
+ * a TaskStatus, so the week/month views and dashboard keep reading `status`.
+ */
+export interface KanbanColumn {
+  id: string;
+  title: string;
+  status: TaskStatus;
+}
+
+export interface KanbanBoard {
+  columns: KanbanColumn[];
+  /** Card ids per column id, in board order. */
+  order: Record<string, string[]>;
+}

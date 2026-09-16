@@ -35,6 +35,9 @@ const config: Config = {
         "surface-muted": "#EEF3F3",
         border: "#D9DFDF",
         "border-light": "#E8ECEC",
+        // Calendar grid lines (week hours/days, month cells): darker than
+        // `border` so the grid stays readable on the `background` colour.
+        "border-strong": "#CBD3D3",
         white: "#FFFFFF",
         black: "#0C0C20",
         brand: "#023047",
