@@ -1,4 +1,4 @@
-# canvasbuddy
+# Canoka
 
 A student app that syncs Canvas into one place: AI-generated notes and calendar
 
@@ -138,5 +138,10 @@ prompt-cache breakpoint.
 ## LLM subtask generation
 
 `llm/generate_subtasks.py` reads a subject JSON from `scraper/out/` and asks
-Claude to break an assessment into ordered subtasks, written to
-`llm/test_output.json`. See [llm/README.md](llm/README.md) for setup.
+Claude to break an assessment into ordered subtasks, then upserts them into
+Supabase (`study_tasks`, linked to the assignment via `assignments`). Run
+`scraper/sync_to_supabase.py` first to push the scraped subject's course and
+assignment data into Supabase — `generate_subtasks.py` depends on it.
+
+See [docs/subtask-pipeline-setup.md](docs/subtask-pipeline-setup.md) for
+full setup (env vars, dependencies, and what's real vs. mocked right now).
