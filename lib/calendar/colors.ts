@@ -1,4 +1,5 @@
 import type { CourseColor } from "@/types/calendar";
+import type { CalendarEventType } from "@/types/calendar";
 
 // Course colours, expressed as design-token values (see styles/variables.css)
 // instead of Tailwind classes, so every course accent stays inside the palette
@@ -60,6 +61,35 @@ const NEUTRAL: CourseTone = {
   fg: "var(--color-text-muted)",
 };
 
+
+// Fixed tones by event type — independent of course colour, so a student can
+// tell "assessment" from "subtask" at a glance across every course.
+const TYPE_MAP: Record<CalendarEventType, CourseTone> = {
+  assessment: {
+    solid: "var(--color-error)",
+    bg: "rgba(201, 76, 76, 0.18)",
+    border: "rgba(201, 76, 76, 0.55)",
+    fg: "var(--color-error)",
+  },
+  task: {
+    solid: "var(--color-info)",
+    bg: "rgba(142, 202, 230, 0.22)",
+    border: "rgba(142, 202, 230, 0.5)",
+    fg: "var(--color-primary)",
+  },
+  class: {
+    solid: "var(--color-text-muted)",
+    bg: "var(--color-surface-muted)",
+    border: "var(--color-border)",
+    fg: "var(--color-text-muted)",
+  },
+};
+
 export function courseTone(color?: CourseColor): CourseTone {
   return color ? MAP[color] : NEUTRAL;
+}
+
+
+export function eventTypeTone(type: CalendarEventType): CourseTone {
+  return TYPE_MAP[type];
 }

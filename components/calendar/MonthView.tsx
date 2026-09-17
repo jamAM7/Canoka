@@ -12,7 +12,7 @@ import {
 } from "date-fns";
 import type { CalendarEvent, Course } from "@/types/calendar";
 import { WEEK_OPTS, eventsOnDay } from "@/lib/calendar/event-utils";
-import { courseTone } from "@/lib/calendar/colors";
+import { eventTypeTone } from "@/lib/calendar/colors";
 
 interface Props {
   anchor: Date;
@@ -79,7 +79,7 @@ export function MonthView({
 
                     <div className="flex flex-col gap-2">
                       {visible.map((ev) => {
-                        const tone = courseTone(courseById.get(ev.courseId ?? "")?.color);
+                        const tone = eventTypeTone(ev.type);
                         return (
                           <button
                             key={ev.id}

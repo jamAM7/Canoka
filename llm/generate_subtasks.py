@@ -5,7 +5,9 @@ from datetime import datetime, timedelta
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
-load_dotenv()
+from supabase import create_client
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 SUBJECT_FILE = Path(__file__).parent.parent / "scraper" / "out" / "41129-software-innovation-studio-spring-2026.json"
 ASSESSMENT_ID = "277999"  # Project Pitch, for this first test
@@ -13,8 +15,14 @@ ASSESSMENT_ID = "277999"  # Project Pitch, for this first test
 MODEL = "claude-sonnet-4-6"
 
 
+def get_supabase():
+    return create_client(
+        os.environ["SUPABASE_URL"],
+        os.environ["SUPABASE_SERVICE_ROLE_KEY"],
+    )
+
+
 def needs_subtasks(assessment):
-    """Skip trivial/placeholder assessments (weekly journals, participation marks)."""
     if assessment.get("points_possible", 0) <= 2:
         return False
     if assessment.get("weight_pct", 0) < 10:
@@ -82,7 +90,6 @@ def generate_subtasks(client, context_markdown):
             }
         ],
     )
-
     tool_use = next(b for b in response.content if b.type == "tool_use")
     return tool_use.input["subtasks"]
 
@@ -95,7 +102,83 @@ def resolve_due_dates(subtasks, assignment_due_at_local):
     return subtasks
 
 
+# ---------------------------------------------------------------------------
+# Supabase writes
+# ---------------------------------------------------------------------------
+
+def get_or_create_study_plan(sb, user_id, course_code):
+    existing = (
+        sb.table("study_plans")
+        .select("id")
+        .eq("user_id", user_id)
+        .eq("name", f"{course_code} study plan")
+        .eq("status", "active")
+        .execute()
+    )
+    if existing.data:
+        return existing.data[0]["id"]
+
+    created = (
+        sb.table("study_plans")
+        .insert({
+            "user_id": user_id,
+            "name": f"{course_code} study plan",
+            "start_date": datetime.now().date().isoformat(),
+            "end_date": (datetime.now().date() + timedelta(days=120)).isoformat(),
+            "generated_by": "ai",
+            "status": "active",
+        })
+        .execute()
+    )
+    return created.data[0]["id"]
+
+
+def get_course_and_assignment_row_ids(sb, external_course_id, external_assignment_id):
+    course = (
+        sb.table("courses")
+        .select("id")
+        .eq("external_course_id", external_course_id)
+        .single()
+        .execute()
+    )
+    course_row_id = course.data["id"]
+
+    assignment = (
+        sb.table("assignments")
+        .select("id")
+        .eq("course_id", course_row_id)
+        .eq("external_assignment_id", external_assignment_id)
+        .single()
+        .execute()
+    )
+    return course_row_id, assignment.data["id"]
+
+
+def upsert_subtasks(sb, study_plan_id, course_row_id, assignment_row_id, subtasks):
+    # Idempotent: clear old subtasks for this assignment before inserting fresh ones.
+    sb.table("study_tasks").delete().eq("assignment_id", assignment_row_id).execute()
+
+    rows = [
+        {
+            "study_plan_id": study_plan_id,
+            "course_id": course_row_id,
+            "assignment_id": assignment_row_id,
+            "title": st["title"],
+            "description": st["description"],
+            "scheduled_date": st["due_date"][:10],
+            "scheduled_start": st["due_date"],
+            "estimated_minutes": st.get("estimated_minutes"),
+            "order_index": st["order"],
+            "status": "completed" if st.get("completed") else "pending",
+        }
+        for st in subtasks
+    ]
+    sb.table("study_tasks").insert(rows).execute()
+
+
 def main():
+    user_id = os.environ["SUPABASE_USER_ID"]
+
     with open(SUBJECT_FILE, encoding="utf-8") as f:
         subject = json.load(f)
 
@@ -110,32 +193,27 @@ def main():
     print(context_md)
     print("=" * 60)
 
-    client = Anthropic()  # reads ANTHROPIC_API_KEY from env
+    client = Anthropic()
     raw_subtasks = generate_subtasks(client, context_md)
     subtasks = resolve_due_dates(raw_subtasks, assessment["due_at_local"])
 
-    output = {
-        "course_id": subject["subject"]["course_id"],
-        "assignment_title": assessment["name"],
-        "due_date": assessment["due_at_local"],
-        "subtasks": [
-            {
-                "id": f"subtask_{i+1}",
-                **st,
-                "completed": False,
-            }
-            for i, st in enumerate(subtasks)
-        ],
-    }
+    for i, st in enumerate(subtasks):
+        st["id"] = f"subtask_{i+1}"
+        st["completed"] = False
 
-    print("\n=== Generated subtask JSON ===")
-    print(json.dumps(output, indent=2))
+    print("\n=== Generated subtasks ===")
+    print(json.dumps(subtasks, indent=2))
 
-    out_path = Path(__file__).parent / "test_output.json"
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(output, f, indent=2)
-    print(f"\nSaved to {out_path}")
+    # --- write to Supabase ---
+    sb = get_supabase()
+    course_row_id, assignment_row_id = get_course_and_assignment_row_ids(
+        sb, subject["subject"]["course_id"], assessment["id"]
+    )
+    study_plan_id = get_or_create_study_plan(sb, user_id, subject["subject"]["code"])
+    upsert_subtasks(sb, study_plan_id, course_row_id, assignment_row_id, subtasks)
+
+    print(f"\nSaved {len(subtasks)} subtasks to Supabase (study_plan {study_plan_id}, assignment {assignment_row_id})")
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
