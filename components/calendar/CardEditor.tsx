@@ -10,7 +10,7 @@ import type {
 } from "@/types/calendar";
 import { formatEventTime, rescheduleEvent, typeLabel } from "@/lib/calendar/event-utils";
 import { PRIORITY_META, PRIORITY_ORDER, checklistProgress, newId } from "@/lib/calendar/kanban";
-import { courseTone } from "@/lib/calendar/colors";
+import { courseTone } from "@/types/calendar";
 import { CloseIcon, PlusIcon } from "@/components/shell/icons";
 import { PRIORITY_STYLES } from "./PriorityTag";
 

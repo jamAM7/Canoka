@@ -37,6 +37,63 @@ export type CourseColor =
   | "rose"
   | "cyan";
 
+export interface CourseTone {
+  solid: string;
+  bg: string;
+  border: string;
+  fg: string;
+}
+
+const COURSE_TONES: Record<CourseColor, CourseTone> = {
+  blue: {
+    solid: "var(--color-course-blue)",
+    bg: "var(--color-course-blue-soft)",
+    border: "var(--color-course-blue-border)",
+    fg: "var(--color-primary)",
+  },
+  violet: {
+    solid: "var(--color-course-violet)",
+    bg: "var(--color-course-violet-soft)",
+    border: "var(--color-course-violet-border)",
+    fg: "#8A3327",
+  },
+  emerald: {
+    solid: "var(--color-course-emerald)",
+    bg: "var(--color-course-emerald-soft)",
+    border: "var(--color-course-emerald-border)",
+    fg: "var(--color-primary)",
+  },
+  amber: {
+    solid: "var(--color-course-amber)",
+    bg: "var(--color-course-amber-soft)",
+    border: "var(--color-course-amber-border)",
+    fg: "#805A00",
+  },
+  rose: {
+    solid: "var(--color-course-rose)",
+    bg: "var(--color-course-rose-soft)",
+    border: "var(--color-course-rose-border)",
+    fg: "var(--color-primary)",
+  },
+  cyan: {
+    solid: "var(--color-course-cyan)",
+    bg: "var(--color-course-cyan-soft)",
+    border: "var(--color-course-cyan-border)",
+    fg: "#5B5D3F",
+  },
+};
+
+const NEUTRAL_TONE: CourseTone = {
+  solid: "var(--color-text-muted)",
+  bg: "var(--color-surface-muted)",
+  border: "var(--color-border)",
+  fg: "var(--color-text-muted)",
+};
+
+export function courseTone(color?: CourseColor): CourseTone {
+  return color ? COURSE_TONES[color] : NEUTRAL_TONE;
+}
+
 export interface CalendarEvent {
   id: string;
   title: string;

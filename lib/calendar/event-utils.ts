@@ -14,9 +14,11 @@ import type { CalendarEvent, TaskStatus } from "@/types/calendar";
 
 export const WEEK_OPTS = { weekStartsOn: 1 as const };
 
-/** Hours shown in the week/day time grid. */
-export const DAY_START_HOUR = 7;
-export const DAY_END_HOUR = 22;
+/** Hours shown in the week/day time grid. This renders a proper 24-hour day
+ * with 24 hourly rows, starting at 12:00 AM and ending at 11:00 PM.
+ */
+export const DAY_START_HOUR = 0;
+export const DAY_END_HOUR = 23;
 export const HOUR_ROW_PX = 56;
 
 export function parse(ev: CalendarEvent): { start: Date; end: Date } {

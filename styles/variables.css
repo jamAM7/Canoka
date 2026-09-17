@@ -39,6 +39,25 @@
     --color-border: #D9DFDF;
     --color-border-light: #E8ECEC;
 
+    --color-course-blue: #8ECAE6;
+    --color-course-blue-soft: rgba(142, 202, 230, 0.52);
+    --color-course-blue-border: rgba(142, 202, 230, 0.8);
+    --color-course-violet: #E26D5C;
+    --color-course-violet-soft: rgba(226, 109, 92, 0.28);
+    --color-course-violet-border: rgba(226, 109, 92, 0.72);
+    --color-course-emerald: #5F8A62;
+    --color-course-emerald-soft: rgba(95, 138, 98, 0.28);
+    --color-course-emerald-border: rgba(95, 138, 98, 0.72);
+    --color-course-amber: #FFB703;
+    --color-course-amber-soft: rgba(255, 183, 3, 0.34);
+    --color-course-amber-border: rgba(255, 183, 3, 0.75);
+    --color-course-rose: #C94C4C;
+    --color-course-rose-soft: rgba(201, 76, 76, 0.28);
+    --color-course-rose-border: rgba(201, 76, 76, 0.72);
+    --color-course-cyan: #C9CBA3;
+    --color-course-cyan-soft: rgba(201, 203, 163, 0.52);
+    --color-course-cyan-border: rgba(201, 203, 163, 0.9);
+
     --color-white: #FFFFFF;
     --color-black: #0C0C20;
 

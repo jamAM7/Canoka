@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import type { CalendarEvent, Course } from "@/types/calendar";
 import { formatEventTime, typeLabel } from "@/lib/calendar/event-utils";
 import { isBoardCard } from "@/lib/calendar/kanban";
-import { courseTone } from "@/lib/calendar/colors";
+import { courseTone } from "@/types/calendar";
 import { CardEditor, type CardEditorProps } from "./CardEditor";
 
 type Props = Omit<CardEditorProps, "event" | "layout"> & {

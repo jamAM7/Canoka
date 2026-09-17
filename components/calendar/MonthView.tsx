@@ -12,7 +12,7 @@ import {
 } from "date-fns";
 import type { CalendarEvent, Course } from "@/types/calendar";
 import { WEEK_OPTS, eventsOnDay } from "@/lib/calendar/event-utils";
-import { courseTone } from "@/lib/calendar/colors";
+import { courseTone } from "@/types/calendar";
 
 interface Props {
   anchor: Date;

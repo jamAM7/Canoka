@@ -10,7 +10,7 @@ import type {
 } from "@/types/calendar";
 import { STATUS_META, STATUS_ORDER, typeLabel } from "@/lib/calendar/event-utils";
 import { checklistProgress } from "@/lib/calendar/kanban";
-import { courseTone } from "@/lib/calendar/colors";
+import { courseTone } from "@/types/calendar";
 import { ChecklistIcon, MoreIcon, NotesIcon, PlusIcon } from "@/components/shell/icons";
 import { PriorityTag } from "./PriorityTag";
 

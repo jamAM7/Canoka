@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { CalendarEventType, Course } from "@/types/calendar";
-import { courseTone } from "@/lib/calendar/colors";
+import { courseTone } from "@/types/calendar";
 import { ChevronIcon } from "@/components/shell/icons";
 
 interface Props {

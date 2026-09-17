@@ -19,7 +19,7 @@ import {
   gridPlacement,
   layoutDayColumn,
 } from "@/lib/calendar/event-utils";
-import { courseTone } from "@/lib/calendar/colors";
+import { courseTone } from "@/types/calendar";
 
 interface Props {
   anchor: Date;
@@ -36,16 +36,23 @@ const HOURS = Array.from(
   { length: DAY_END_HOUR - DAY_START_HOUR + 1 },
   (_, i) => DAY_START_HOUR + i,
 );
+const ALL_DAY_HEIGHT = 52;
+
+const formatHourLabel = (hour: number) => {
+  const normalized = hour % 12 || 12;
+  const suffix = hour >= 12 ? "pm" : "am";
+  return `${normalized}${suffix}`;
+};
 
 export function WeekView({ anchor, events, courseById, onSelect }: Props) {
   const weekStart = startOfWeek(anchor, WEEK_OPTS);
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to ~8am on mount / week change.
+  // Scroll to ~8am on mount / week change while still using a 12am->12am grid.
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = Math.max(0, (8 - DAY_START_HOUR) * HOUR_ROW_PX - 12);
+      scrollRef.current.scrollTop = Math.max(0, 8 * HOUR_ROW_PX - 12);
     }
   }, [anchor]);
 
@@ -62,15 +69,18 @@ export function WeekView({ anchor, events, courseById, onSelect }: Props) {
   return (
     <div ref={scrollRef} className="cb-scroll min-h-0 flex-1 overflow-y-auto">
       {/* Day header */}
-      <div className={`sticky top-0 z-20 grid ${COLUMNS} items-start border-b border-border-strong bg-background`}>
+      <div className={`sticky top-0 z-20 grid ${COLUMNS} items-start bg-background`}>
         <div />
         {days.map((day) => (
-          <div key={day.toISOString()} className="flex min-w-0 flex-col items-center p-2 text-center">
+          <div
+            key={day.toISOString()}
+            className="flex min-w-0 flex-col items-center border-l border-border bg-background px-2 pb-2 pt-2 text-center first:border-l-0"
+          >
             <div className="text-sm font-medium text-text-muted">{format(day, "EEE")}</div>
-            <div className={`text-sm mt-1 ${isToday(day) ? "font-semibold text-primary" : "text-text"}`}>
+            <div className={`mt-1 text-sm ${isToday(day) ? "font-semibold text-primary" : "text-text"}`}>
               {format(day, "d")}
             </div>
-            <div className="mt-1 flex flex-col gap-1 w-full">
+            <div className="mt-3 flex w-full flex-col gap-1 border-t border-border pt-2">
               {dueByDay(day).map((ev) => {
                 const tone = courseTone(courseById.get(ev.courseId ?? "")?.color);
                 return (
@@ -91,12 +101,16 @@ export function WeekView({ anchor, events, courseById, onSelect }: Props) {
       </div>
 
       {/* Time grid */}
-      <div className={`relative grid ${COLUMNS}`}>
+      <div className={`relative grid ${COLUMNS} border-t border-border`}>
         {/* Hour labels */}
         <div className="flex flex-col pr-3 text-right">
           {HOURS.map((h) => (
-            <div key={h} style={{ height: HOUR_ROW_PX }} className="text-xs text-text-muted">
-              {h === 0 ? "" : format(new Date().setHours(h, 0), "h a").toLowerCase()}
+            <div
+              key={h}
+              style={{ height: HOUR_ROW_PX }}
+              className="relative text-xs text-text-muted leading-none"
+            >
+              <span className="absolute right-0 top-0">{h === 0 ? "12am" : formatHourLabel(h)}</span>
             </div>
           ))}
         </div>
@@ -107,11 +121,11 @@ export function WeekView({ anchor, events, courseById, onSelect }: Props) {
           return (
             <div
               key={day.toISOString()}
-              className="relative min-w-0 border-l border-border-strong last:border-r"
+              className="relative min-w-0 border-l border-border bg-background first:border-l-0 last:border-r"
               style={{ height: HOURS.length * HOUR_ROW_PX }}
             >
               {HOURS.map((h) => (
-                <div key={h} style={{ height: HOUR_ROW_PX }} className="border-b border-border-strong" />
+                <div key={h} style={{ height: HOUR_ROW_PX }} className="border-b border-border" />
               ))}
 
               {isToday(day) && <NowLine />}
@@ -132,10 +146,9 @@ export function WeekView({ anchor, events, courseById, onSelect }: Props) {
                       background: tone.bg,
                       borderColor: tone.border,
                       color: tone.fg,
+                      opacity: event.status === "done" ? 0.7 : 0.82,
                     }}
-                    className={`absolute rounded-md border px-2 py-1 text-sm text-left overflow-hidden ${
-                      event.status === "done" ? "opacity-60" : ""
-                    }`}
+                    className="absolute rounded-md border px-2 py-1 text-sm text-left overflow-hidden"
                   >
                     <div className="flex items-center gap-2">
                       {event.type === "assessment" && <span className="text-xs">◆</span>}

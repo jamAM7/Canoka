@@ -2,7 +2,7 @@ import Link from "next/link";
 import { endOfWeek, format, isPast, isWithinInterval, startOfWeek } from "date-fns";
 import type { CalendarEvent, Course } from "@/types/calendar";
 import { WEEK_OPTS, relativeDueLabel } from "@/lib/calendar/event-utils";
-import { courseTone } from "@/lib/calendar/colors";
+import { courseTone } from "@/types/calendar";
 import { CURRENT_USER, getGreeting } from "@/lib/user/mock-user";
 
 interface Props {
