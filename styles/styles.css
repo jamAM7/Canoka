@@ -241,7 +241,8 @@ h6 {
 
 .app-shell {
     display: grid;
-    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    /* auto: the column follows the Sidebar component's own (collapsible) width. */
+    grid-template-columns: auto minmax(0, 1fr);
     min-height: 100vh;
 }
 
