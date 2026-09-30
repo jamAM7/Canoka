@@ -86,7 +86,7 @@ export function Sidebar({ active, calendarView, onCalendarViewChange }: Props) {
   return (
     <aside
       className={`flex h-full shrink-0 flex-col border-r border-border bg-surface py-5 transition-[width] duration-200 ${
-        collapsed ? "w-[72px] px-3" : "w-[240px] px-4"
+        collapsed ? "w-[72px] px-3" : "w-[208px] px-4"
       }`}
     >
       <div className={`mb-10 flex items-center ${collapsed ? "flex-col gap-3" : "justify-between"}`}>
