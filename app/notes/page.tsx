@@ -1,15 +1,18 @@
 // Notes overview: list of subjects -> weeks.
 // TODO: subject/week list, pulled from `subjects` + `notes`.
-import { ComingSoon } from "@/components/shell/ComingSoon";
+import { MOCK_COURSES } from "@/lib/calendar/mock-data";
+import { Sidebar } from "@/components/shell/Sidebar";
+import { NotesContent } from "@/components/notes/NotesContent";
 
 export const metadata = { title: "Notes · Canoka" };
 
 export default function NotesPage() {
   return (
-    <ComingSoon
-      active="notes"
-      title="Notes"
-      description="AI-generated notes for each subject and week, built from your Canvas content."
-    />
+    <div className="app-shell">
+      <Sidebar active="notes" />
+      <main className="main">
+        <NotesContent courses={MOCK_COURSES} />
+      </main>
+    </div>
   );
 }

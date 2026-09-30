@@ -878,6 +878,32 @@ h6 {
     font-weight: var(--font-weight-semibold);
 }
 
+.note-editor {
+    display: flex;
+    flex-direction: column;
+}
+
+.note-editor-body {
+    flex: 1;
+    width: 100%;
+    min-height: 480px;
+
+    border: 0;
+    outline: 0;
+    resize: none;
+
+    background: transparent;
+    color: var(--color-text);
+
+    font: inherit;
+    line-height: 1.7;
+}
+
+.note-editor-body::placeholder,
+.note-editor-title::placeholder {
+    color: var(--color-text-muted);
+}
+
 
 /* =========================================================
    14. QUIZ
