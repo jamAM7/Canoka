@@ -48,7 +48,7 @@ function subscribe(listener: () => void) {
 }
 
 const baseLink =
-  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors";
+  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors";
 
 function NavLink({
   href,
@@ -69,8 +69,8 @@ function NavLink({
       title={collapsed ? label : undefined}
       className={`${baseLink} ${collapsed ? "justify-center" : ""} ${
         isActive
-          ? "bg-surface-muted text-primary"
-          : "text-text-muted hover:bg-surface-muted hover:text-text"
+          ? "bg-surface-muted font-bold text-primary"
+          : "font-medium text-text-muted hover:bg-surface-muted hover:text-text"
       }`}
     >
       {icon}
