@@ -11,14 +11,14 @@ import {
   type ScrapeRun,
   type ScraperSetup,
 } from "./cli";
-import { readEnvFile } from "./env";
+import { readCanvasEnv } from "./env";
 
 // Runs scraper/scrape.py on this machine for the Settings page, one scrape at
 // a time, and keeps its output so the page can follow along. Server-only.
 
-const SCRAPER_DIR = path.join(process.cwd(), "scraper");
+export const SCRAPER_DIR = path.join(process.cwd(), "scraper");
 // The virtualenv the README sets up at the repo root.
-const PYTHON =
+export const PYTHON =
   process.platform === "win32"
     ? path.join(process.cwd(), ".venv", "Scripts", "python.exe")
     : path.join(process.cwd(), ".venv", "bin", "python");
@@ -108,7 +108,7 @@ export function scrapeProgress(runId?: number, since = 0): ScrapeProgress {
 
 /** What the scraper needs on this machine, read the way scrape.py reads it. */
 export function scraperSetup(): ScraperSetup {
-  const file = readEnvFile();
+  const file = readCanvasEnv();
   // As in scrape.py, the process environment wins over scraper/.env.
   return {
     enabled: process.env.NODE_ENV !== "production",

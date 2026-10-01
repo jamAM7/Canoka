@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 
-// The /api/scraper routes run a process and write scraper/.env on this
-// machine, so they only answer in development, and only change anything for
-// requests from the app's own pages.
+// Routes that run Python or write credentials on this machine (the scraper,
+// AI review of notes) only answer in development, and only change anything
+// for requests from the app's own pages.
 
 /** A response refusing the request, or null to go ahead. */
-export function refuseScraperRequest(request: Request): NextResponse | null {
+export function refuseUnlessLocal(request: Request): NextResponse | null {
   if (process.env.NODE_ENV === "production") {
     return NextResponse.json(
-      { error: "Scraping from the app only works in development (npm run dev)." },
+      { error: "This only works while running the app locally (npm run dev)." },
       { status: 403 },
     );
   }

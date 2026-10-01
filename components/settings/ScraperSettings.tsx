@@ -14,7 +14,7 @@ import {
   type ScrapeRun,
   type ScraperSetup,
 } from "@/lib/scraper/cli";
-import type { LastScrape } from "@/lib/scraper/subjects";
+import type { LastScrape, Subject } from "@/lib/scraper/subjects";
 
 interface Props {
   setup: ScraperSetup;
@@ -460,7 +460,92 @@ export function ScraperSettings({ setup, lastScrape, progress }: Props) {
           </pre>
         </div>
       )}
+
+      {lastScrape && lastScrape.subjects.length > 0 && (
+        <WeekContent subjects={lastScrape.subjects} disabled={!setup.enabled || !setup.python} />
+      )}
     </section>
+  );
+}
+
+/** Pulls one week of a subject from the last scrape (scraper/week.py): what AI review checks notes against. */
+function WeekContent({ subjects, disabled }: { subjects: Subject[]; disabled: boolean }) {
+  const [subjectId, setSubjectId] = useState(subjects[0].id);
+  const [week, setWeek] = useState(1);
+  const [pulling, setPulling] = useState(false);
+  const [result, setResult] = useState<{ label: string; markdown: string | null } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0];
+
+  const pull = async () => {
+    setPulling(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/scraper/week?subject=${subject.id}&week=${week}`, { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) setError(data.error);
+      else setResult({ label: `${subject.code ?? subject.name} week ${week}`, markdown: data.markdown });
+    } catch {
+      setError("Couldn't reach the app's server.");
+    } finally {
+      setPulling(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3 border-t border-border-light p-5">
+      <div>
+        <h3 className="text-base font-semibold text-text">Week content</h3>
+        <p className="mt-0.5 text-sm text-text-muted">
+          What the last scrape holds for one week of a subject: the content AI review checks your notes against.{" "}
+          <code className="font-mono text-xs">python week.py 41201 3</code> prints the same.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          aria-label="Subject"
+          value={subject.id}
+          onChange={(e) => {
+            setSubjectId(e.target.value);
+            setWeek(1);
+          }}
+          className={`${FIELD} w-auto max-w-full`}
+        >
+          {subjects.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.code ? `${s.code} · ${s.name}` : s.name}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Week"
+          value={week}
+          onChange={(e) => setWeek(Number(e.target.value))}
+          className={`${FIELD} w-auto max-w-full`}
+        >
+          {subject.weeks.map((w) => (
+            <option key={w.number} value={w.number}>
+              {w.title ? `Week ${w.number}: ${w.title}` : `Week ${w.number}`}
+            </option>
+          ))}
+        </select>
+        <button type="button" onClick={pull} disabled={disabled || pulling} className={SECONDARY_BUTTON}>
+          {pulling ? "Pulling…" : "Pull week"}
+        </button>
+      </div>
+      {error && <p className="text-sm text-error">{error}</p>}
+      {result &&
+        (result.markdown ? (
+          <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md bg-surface-muted p-4 font-mono text-xs leading-relaxed text-text">
+            {result.markdown}
+          </pre>
+        ) : (
+          <p className="text-sm text-text-muted">
+            Nothing in the last scrape names {result.label}. Some subjects keep their weekly material outside Canvas,
+            in Ed or on OneNote.
+          </p>
+        ))}
+    </div>
   );
 }
 

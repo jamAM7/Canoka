@@ -35,6 +35,7 @@ python scrape.py --drop-boilerplate     # remove UTS template pages
 python scrape.py --pretty               # indent the JSON for reading
 python scrape.py --no-render            # JSON only, skip the markdown views
 python scrape.py --refresh              # ignore the local response cache
+python week.py 41201 3                  # one week of a subject, from the last scrape
 ```
 
 By default only the **current session** is scraped, and courses with no
@@ -64,6 +65,24 @@ ignores the cache entirely.
 Downloaded files are skipped when a local copy already matches the size Canvas
 reports, so a re-run with `--download --extract` costs seconds rather than
 pulling the whole course library again.
+
+## One week of a subject
+
+`week.py` prints what the last scrape holds for one week of a subject. It's
+what the app's AI review checks a student's notes against, and it never calls
+Canvas:
+
+```bash
+python week.py 41201 3          # by subject code, or by Canvas course ID
+python week.py 41201 3 --json   # {"subject", "week", "markdown"}, for the app
+```
+
+Subjects keep their weeks in different places, so `render_week` looks in each:
+modules named for the week (41201, 41028), rendered as a module view is; items
+named for it inside an unnumbered module (41129's "Week 3 - ….pdf" slides under
+"Learning Contents"); and assessments that name it (41129's weekly journals).
+41052 names no weeks at all, so every week there comes back empty. A file adds
+only its name unless the scrape ran with `--extract`.
 
 ## What each subject file contains
 
