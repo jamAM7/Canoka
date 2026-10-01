@@ -1,26 +1,27 @@
-// Until Supabase is wired up, typed notes live in this browser's localStorage,
-// keyed by course id. Bump the key's version if the saved shape changes.
-const KEY = "canoka.notes.v1";
+// Until Supabase is wired up, typed notes live in this browser's localStorage.
+// Bump the key's version if the saved shape changes.
+const KEY = "canoka.notes.v2";
 
 export interface Note {
+  id: string;
+  /** Canvas course id of the note's subject (see lib/scraper/subjects). */
+  courseId: string;
   title: string;
   body: string;
 }
 
-export type SavedNotes = Record<string, Note>;
-
-export function loadNotes(): SavedNotes | null {
+export function loadNotes(): Note[] | null {
   try {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return null;
     const data = JSON.parse(raw);
-    return data && typeof data === "object" ? data : null;
+    return Array.isArray(data) ? data : null;
   } catch {
     return null;
   }
 }
 
-export function saveNotes(notes: SavedNotes): void {
+export function saveNotes(notes: Note[]): void {
   try {
     window.localStorage.setItem(KEY, JSON.stringify(notes));
   } catch {

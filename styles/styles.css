@@ -239,9 +239,10 @@ h6 {
    4. APP SHELL / NAVIGATION
    ========================================================= */
 
+/* The first column takes the Sidebar's own width, which changes when it collapses. */
 .app-shell {
     display: grid;
-    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
     min-height: 100vh;
 }
 
@@ -823,9 +824,48 @@ h6 {
     overflow: hidden;
 }
 
+.notes-layout.list-hidden {
+    grid-template-columns: 56px minmax(0, 1fr);
+}
+
 .notes-list {
+    /* Where a subject's name starts, past its header padding, chevron and gap.
+       Its notes line up with it. */
+    --notes-indent: calc(var(--space-3) + 16px + var(--space-2));
+
     border-right: var(--border-width) solid var(--color-border-light);
     overflow-y: auto;
+}
+
+/* Top padding lines the toggle up with the editor's toolbar. */
+.notes-list-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+
+    padding: var(--space-8) var(--space-3) var(--space-2);
+    background: var(--color-surface);
+}
+
+.notes-group {
+    border-bottom: var(--border-width) solid var(--color-border-light);
+}
+
+.notes-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+
+    padding: var(--space-3);
+}
+
+.notes-group-empty {
+    margin: 0;
+    padding: 0 var(--space-5) var(--space-4) var(--notes-indent);
+
+    color: var(--color-text-light);
+    font-size: var(--font-size-sm);
 }
 
 .note-item {
@@ -833,12 +873,18 @@ h6 {
     width: 100%;
 
     padding: var(--space-5);
+    padding-left: var(--notes-indent);
 
     background: transparent;
     border: 0;
     border-bottom: var(--border-width) solid var(--color-border-light);
 
     text-align: left;
+}
+
+/* The group's own border closes it off. */
+.notes-group .note-item:last-child {
+    border-bottom: 0;
 }
 
 .note-item:hover {
@@ -862,6 +908,13 @@ h6 {
 
 .note-editor {
     padding: var(--space-8);
+}
+
+.note-editor-toolbar {
+    display: flex;
+    justify-content: flex-end;
+
+    margin-bottom: var(--space-4);
 }
 
 .note-editor-title {
@@ -1159,7 +1212,8 @@ h6 {
         grid-template-columns: 1fr;
     }
 
-    .notes-layout {
+    .notes-layout,
+    .notes-layout.list-hidden {
         grid-template-columns: 1fr;
     }
 
@@ -1167,6 +1221,10 @@ h6 {
         max-height: 260px;
         border-right: 0;
         border-bottom: var(--border-width) solid var(--color-border-light);
+    }
+
+    .notes-list-header {
+        padding: var(--space-3);
     }
 }
 

@@ -43,6 +43,34 @@ export function CalendarIcon({ className }: IconProps) {
   );
 }
 
+export function WeekViewIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
+      <path d="M3.5 9.5h17M9.2 9.5v11M14.8 9.5v11" />
+    </svg>
+  );
+}
+
+export function MonthViewIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
+      <path d="M3.5 9.5h17M3.5 15h17M9.2 9.5v11M14.8 9.5v11" />
+    </svg>
+  );
+}
+
+export function KanbanIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3.5" y="4" width="4.5" height="16" rx="1.2" />
+      <rect x="9.75" y="4" width="4.5" height="11" rx="1.2" />
+      <rect x="16" y="4" width="4.5" height="7" rx="1.2" />
+    </svg>
+  );
+}
+
 export function GearIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden="true">
@@ -56,6 +84,15 @@ export function ChevronIcon({ className, dir = "left" }: IconProps & { dir?: "le
   return (
     <svg {...base} width={16} height={16} className={className} aria-hidden="true">
       <path d={dir === "left" ? "M14.5 5.5 9 12l5.5 6.5" : "M9.5 5.5 15 12l-5.5 6.5"} />
+    </svg>
+  );
+}
+
+export function PanelIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+      <path d="M9.5 4.5v15" />
     </svg>
   );
 }
