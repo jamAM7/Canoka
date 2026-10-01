@@ -68,6 +68,8 @@ export interface CourseModuleRow {
   position: number | null;
   unlock_at: string | null;
   published: boolean;
+  /** Generated from a "Week N" in `name` (migration course_modules_week_number). Null if it names none. */
+  week_number: number | null;
   created_at: string;
   updated_at: string;
 }
