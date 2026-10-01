@@ -13,6 +13,17 @@ export async function readJson(request: Request): Promise<unknown> {
   }
 }
 
+/** The request's JSON body, or {} if it has none, or a 400. */
+export async function optionalJson(request: Request): Promise<unknown> {
+  const text = await request.text();
+  if (text.trim() === "") return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new NotesError("Send the request as JSON.", 400);
+  }
+}
+
 /** A JSON error response: the status a NotesError carries, else 500. */
 export function failure(error: unknown): NextResponse {
   const status = error instanceof NotesError ? error.status : 500;

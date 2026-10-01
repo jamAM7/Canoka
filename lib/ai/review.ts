@@ -99,7 +99,8 @@ export async function reviewNotes(request: ReviewRequest): Promise<ReviewResult>
   return { review: response.parsed_output, model: response.model || MODEL };
 }
 
-function describe(error: unknown, key: string | null): string {
+/** A message fit to show for a failed Anthropic call. */
+export function describe(error: unknown, key: string | null): string {
   if (error instanceof Anthropic.AuthenticationError) {
     return "Anthropic rejected the API key. Check it in Settings.";
   }

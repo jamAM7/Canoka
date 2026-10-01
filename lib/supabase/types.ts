@@ -185,3 +185,17 @@ export interface WeekReviewRow {
   content_updated_at: string | null;
   created_at: string;
 }
+
+export interface StudyPreferencesRow {
+  id: string;
+  user_id: string;
+  preferred_session_minutes: number;
+  max_daily_minutes: number;
+  /** "HH:MM:SS", local time. */
+  preferred_start_time: string | null;
+  preferred_end_time: string | null;
+  /** Weekdays the student studies on; the default is [1, 2, 3, 4, 5]. */
+  study_days: number[];
+  created_at: string;
+  updated_at: string;
+}
