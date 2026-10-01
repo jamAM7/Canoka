@@ -113,6 +113,7 @@ cp scraper/.env.example scraper/.env    # add CANVAS_BASE_URL and CANVAS_API_TOK
 cd scraper
 ../.venv/bin/python scrape.py                       # JSON + markdown views
 ../.venv/bin/python scrape.py --download --extract  # also convert attachments
+../.venv/bin/python week.py 41201 3                 # one week of a subject, from the last scrape
 ../.venv/bin/python selftest.py                     # no network, no token needed
 ```
 
