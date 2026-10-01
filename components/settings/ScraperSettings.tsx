@@ -100,6 +100,29 @@ export function ScraperSettings({ setup, lastScrape, progress }: Props) {
     next.current = data.next;
   };
 
+  // Saves what a scrape found to the database, so Notes can list its subjects and weeks.
+  const syncToDatabase = async () => {
+    const say = (text: string, stderr = false) =>
+      setLines((prev) => [...prev, { text, stderr }].slice(-MAX_LINES));
+    say("Saving the subjects to the database…");
+    try {
+      const res = await fetch("/api/canvas/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const data = await res.json();
+      for (const s of data.synced ?? []) {
+        say(`Saved ${s.code ?? s.name}: ${s.weeks} weeks, ${s.assignments} assessments.`);
+        for (const warning of s.warnings) say(warning, true);
+      }
+      for (const e of data.errors ?? []) say(`Couldn't save ${e.subject}: ${e.error}`, true);
+      if (!res.ok && !data.errors) say(`Couldn't save the subjects: ${data.error}`, true);
+    } catch {
+      say("Couldn't reach the app's server to save the subjects.", true);
+    }
+  };
+
   // Follow a running scrape's output, then reload the page's data when it ends.
   useEffect(() => {
     if (!run || run.status !== "running") return;
@@ -120,6 +143,7 @@ export function ScraperSettings({ setup, lastScrape, progress }: Props) {
         }
         show(data, data.run.id === id);
         if (data.run.status !== "running") {
+          if (data.run.status === "succeeded") await syncToDatabase();
           router.refresh();
           return;
         }

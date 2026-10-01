@@ -1,25 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { Subject } from "@/lib/scraper/subjects";
-import { newId } from "@/lib/calendar/kanban";
-import {
-  loadNotes,
-  loadReviews,
-  noteText,
-  reviewKey,
-  saveNotes,
-  saveReviews,
-  type Note,
-  type SavedReview,
-} from "@/lib/notes/storage";
+import { useEffect, useRef, useState } from "react";
+import type { NoteDoc, NotesSubject } from "@/lib/notes/types";
+import { docText } from "@/lib/notes/text";
+import { loadReviews, reviewKey, saveReviews, type Note, type SavedReview } from "@/lib/notes/storage";
 import { ChevronIcon, PanelIcon, PlusIcon, SparkleIcon } from "@/components/shell/icons";
 import { NoteEditor } from "./NoteEditor";
 import { WeekReview } from "./WeekReview";
 
 interface Props {
-  subjects: Subject[];
+  subjects: NotesSubject[];
+  /** The student's notes, from the database. */
+  initialNotes: Note[];
 }
+
+/** What a save sends for a note: only what changed. */
+interface NotePatch {
+  title?: string;
+  content?: NoteDoc;
+  moduleId?: string;
+}
+
+/** Edits go to the server once typing pauses. Each saved change to a note's text adds a history row. */
+const SAVE_DELAY_MS = 1500;
+const RETRY_DELAY_MS = 5000;
+
+const JSON_HEADERS = { "Content-Type": "application/json" };
 
 interface WeekGroup {
   /** Null for a subject's notes that don't have a week yet. */
@@ -44,7 +50,7 @@ const SMALL_ICON_BUTTON =
   "grid h-7 w-7 shrink-0 place-items-center rounded-md text-text-muted transition-colors hover:bg-surface-muted hover:text-text";
 
 /** The list: each subject's weeks with their notes (newest first), then other notes. */
-function groupNotes(notes: Note[], subjects: Subject[]): Group[] {
+function groupNotes(notes: Note[], subjects: NotesSubject[]): Group[] {
   const groups: Group[] = subjects.map((subject) => {
     const mine = notes.filter((n) => n.courseId === subject.id);
     const weeks: WeekGroup[] = subject.weeks.map((week) => ({
@@ -66,13 +72,13 @@ function groupNotes(notes: Note[], subjects: Subject[]): Group[] {
 }
 
 /** Notes in the order the list shows them. */
-function inListOrder(notes: Note[], subjects: Subject[]): Note[] {
+function inListOrder(notes: Note[], subjects: NotesSubject[]): Note[] {
   return groupNotes(notes, subjects).flatMap((g) => g.weeks.flatMap((w) => w.notes));
 }
 
 /** A note's first line of text, for its preview in the list. */
-function firstLine(content: string): string {
-  return noteText(content).split("\n").map((line) => line.trim()).find(Boolean) ?? "";
+function firstLine(content: NoteDoc): string {
+  return docText(content).split("\n").map((line) => line.trim()).find(Boolean) ?? "";
 }
 
 /** Key for a week's collapsed state in the list. */
@@ -80,8 +86,8 @@ const weekKey = (subjectId: string, week: number | null) => `${subjectId}:${week
 
 // Notes view: the student's notes by subject and week in a collapsible list on
 // the left; the selected note on the right, with an AI review of its week.
-// TODO: load real notes from `subjects` + `notes` and save edits back.
-export function NotesContent({ subjects }: Props) {
+// Notes are saved to Supabase through /api/notes as the student types.
+export function NotesContent({ subjects, initialNotes }: Props) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [listOpen, setListOpen] = useState(true);
@@ -90,27 +96,75 @@ export function NotesContent({ subjects }: Props) {
   const [reviewing, setReviewing] = useState<string | null>(null);
   const [reviewError, setReviewError] = useState<{ key: string; message: string } | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Read saved notes after mount so server and client render the same markup.
+  // Edits wait here until typing pauses. One request per note at a time, so saves land in order.
+  const pending = useRef(new Map<string, NotePatch>());
+  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const saving = useRef(new Set<string>());
+
+  // Show the notes after mount, as before, so server and client render the same markup.
   useEffect(() => {
-    const saved = loadNotes() ?? [];
-    const first = inListOrder(saved, subjects)[0];
-    setNotes(saved);
+    const first = inListOrder(initialNotes, subjects)[0];
+    setNotes(initialNotes);
     setActiveId(first?.id ?? null);
     // Every subject lists a whole session of weeks, so only the open note's starts expanded.
     const open = first?.courseId ?? subjects[0]?.id;
     setClosed(new Set(subjects.map((s) => s.id).filter((id) => id !== open)));
     setReviews(loadReviews());
     setLoaded(true);
-  }, [subjects]);
-
-  useEffect(() => {
-    if (loaded) saveNotes(notes);
-  }, [notes, loaded]);
+  }, [subjects, initialNotes]);
 
   useEffect(() => {
     if (loaded) saveReviews(reviews);
   }, [reviews, loaded]);
+
+  // Sends a note's waiting edits now. `unload` lets the request outlive the page.
+  const flush = (id: string, unload = false) => {
+    clearTimeout(timers.current.get(id));
+    timers.current.delete(id);
+    const patch = pending.current.get(id);
+    if (!patch) return;
+    if (saving.current.has(id)) {
+      timers.current.set(id, setTimeout(() => flush(id), 300));
+      return;
+    }
+    pending.current.delete(id);
+    saving.current.add(id);
+    fetch(`/api/notes/${id}`, {
+      method: "PATCH",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(patch),
+      keepalive: unload,
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "The server refused the save.");
+        setSaveError(null);
+      })
+      .catch((error: Error) => {
+        // Keep the edit, under anything typed since, and try again shortly.
+        pending.current.set(id, { ...patch, ...pending.current.get(id) });
+        if (!timers.current.has(id)) timers.current.set(id, setTimeout(() => flush(id), RETRY_DELAY_MS));
+        setSaveError(`Couldn't save your changes (${error.message}) Trying again…`);
+      })
+      .finally(() => saving.current.delete(id));
+  };
+
+  const queueSave = (id: string, patch: NotePatch) => {
+    pending.current.set(id, { ...pending.current.get(id), ...patch });
+    clearTimeout(timers.current.get(id));
+    timers.current.set(id, setTimeout(() => flush(id), SAVE_DELAY_MS));
+  };
+
+  // Don't lose the last few seconds of typing when the student leaves the page.
+  useEffect(() => {
+    const flushAll = () => Array.from(pending.current.keys()).forEach((id) => flush(id, true));
+    window.addEventListener("pagehide", flushAll);
+    return () => {
+      window.removeEventListener("pagehide", flushAll);
+      flushAll();
+    };
+  }, []);
 
   const toggle = (key: string) => {
     setClosed((prev) => {
@@ -120,29 +174,69 @@ export function NotesContent({ subjects }: Props) {
     });
   };
 
-  // Opens the subject and the week too, so the new note shows in the list.
-  const addNote = (subjectId: string, week: number) => {
-    const note: Note = { id: newId("note"), courseId: subjectId, week, title: "", content: "" };
-    setNotes((prev) => [note, ...prev]);
-    setClosed((prev) => {
-      const next = new Set(prev);
-      next.delete(subjectId);
-      next.delete(weekKey(subjectId, week));
-      return next;
-    });
-    setActiveId(note.id);
+  // The server makes the note (every note belongs to a week's module), then it
+  // opens the subject and the week too, so it shows in the list.
+  const addNote = async (subjectId: string, week: number) => {
+    const moduleId = subjects.find((s) => s.id === subjectId)?.weeks.find((w) => w.number === week)?.moduleId;
+    if (!moduleId) return;
+    try {
+      const res = await fetch("/api/notes", {
+        method: "POST",
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ courseId: subjectId, moduleId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSaveError(data.error ?? "Couldn't add the note.");
+        return;
+      }
+      const note: Note = data.note;
+      setSaveError(null);
+      setNotes((prev) => [note, ...prev]);
+      setClosed((prev) => {
+        const next = new Set(prev);
+        next.delete(subjectId);
+        next.delete(weekKey(subjectId, week));
+        return next;
+      });
+      setActiveId(note.id);
+    } catch {
+      setSaveError("Couldn't reach the app's server.");
+    }
   };
 
   const updateNote = (id: string, patch: Partial<Note>) => {
     setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, ...patch } : n)));
+    const save: NotePatch = {};
+    if (patch.title !== undefined) save.title = patch.title;
+    if (patch.content !== undefined) save.content = patch.content;
+    if (Object.keys(save).length > 0) queueSave(id, save);
+  };
+
+  // Moves a note to another week of its subject, saved at once.
+  const moveToWeek = (id: string, subject: NotesSubject, week: number) => {
+    const target = subject.weeks.find((w) => w.number === week);
+    if (!target) return;
+    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, week, moduleId: target.moduleId } : n)));
+    queueSave(id, { moduleId: target.moduleId });
+    flush(id);
   };
 
   // Open the next note in the list in its place, or the previous one if it was last.
+  // The server archives it rather than deleting it.
   const deleteNote = (id: string) => {
     const list = inListOrder(notes, subjects);
     const i = list.findIndex((n) => n.id === id);
+    clearTimeout(timers.current.get(id));
+    timers.current.delete(id);
+    pending.current.delete(id);
     setNotes((prev) => prev.filter((n) => n.id !== id));
     setActiveId((list[i + 1] ?? list[i - 1])?.id ?? null);
+    fetch(`/api/notes/${id}`, { method: "DELETE" })
+      .then((res) => {
+        if (!res.ok) setSaveError("Couldn't delete the note. It will be back when you reload.");
+      })
+      .catch(() => setSaveError("Couldn't reach the app's server."));
   };
 
   const reviewWeek = async (subjectId: string, week: number) => {
@@ -154,10 +248,11 @@ export function NotesContent({ subjects }: Props) {
       const res = await fetch("/api/notes/review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // Until the review reads from the database it still takes the Canvas course id and the notes' text.
         body: JSON.stringify({
-          subjectId,
+          subjectId: subjects.find((s) => s.id === subjectId)?.externalId,
           week,
-          notes: weekNotes.map(({ title, content }) => ({ title, content })),
+          notes: weekNotes.map(({ title, content }) => ({ title, content: docText(content) })),
         }),
       });
       const data = await res.json();
@@ -250,6 +345,12 @@ export function NotesContent({ subjects }: Props) {
         </p>
       </header>
 
+      {saveError && (
+        <p role="alert" className="px-2 text-sm text-error">
+          {saveError}
+        </p>
+      )}
+
       <div className={`notes-layout${listOpen ? "" : " list-hidden"}`}>
         {/* Collapses to a strip holding just the toggle, so the list can always be reopened. */}
         <aside className="notes-list">
@@ -270,7 +371,7 @@ export function NotesContent({ subjects }: Props) {
           <div id="notes-list-groups" hidden={!listOpen}>
             {subjects.length === 0 && (
               <p className="px-5 pb-4 text-sm text-text-muted">
-                No subjects yet. Run the Canvas scraper (scraper/scrape.py), then reload this page.
+                No subjects yet. Scrape Canvas in Settings, which saves them to the database, then reload this page.
               </p>
             )}
 
@@ -326,7 +427,7 @@ export function NotesContent({ subjects }: Props) {
                     <select
                       aria-label="Week"
                       value={activeWeek ?? ""}
-                      onChange={(e) => updateNote(active.id, { week: e.target.value ? Number(e.target.value) : null })}
+                      onChange={(e) => e.target.value && moveToWeek(active.id, activeSubject, Number(e.target.value))}
                       className="note-week-select"
                     >
                       {activeWeek === null && <option value="">No week</option>}
