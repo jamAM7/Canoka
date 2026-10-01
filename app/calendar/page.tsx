@@ -1,17 +1,38 @@
 // Calendar: classes, assessment tasks, self/AI tasks.
 // Weekly is the primary view; monthly and Kanban are switchable from the toolbar.
 //
-// Data is mocked in `lib/calendar/mock-data` for this frontend pass. Replace
-// with a Supabase query over `calendar_events` when the backend is ready.
+// Assessments and study tasks come from Supabase (lib/data/calendar) on every
+// request. The student's edits stay in this browser for now (lib/calendar/storage).
+// There's no timetable table yet, so no classes show.
 import { CalendarWorkspace } from "@/components/calendar/CalendarWorkspace";
-import { MOCK_COURSES, MOCK_EVENTS } from "@/lib/calendar/mock-data";
+import { currentUser } from "@/lib/data/user";
+import { getCalendarEvents, getCourses } from "@/lib/data/calendar";
 
 export const metadata = { title: "Calendar · Canoka" };
 
-export default function CalendarPage() {
-  return (
-    <main>
-      <CalendarWorkspace events={MOCK_EVENTS} courses={MOCK_COURSES} />
-    </main>
-  );
+export const dynamic = "force-dynamic";
+
+export default async function CalendarPage() {
+  try {
+    const user = await currentUser();
+    const courses = await getCourses(user.id);
+    const events = await getCalendarEvents(
+      user.id,
+      courses.map((c) => c.id),
+      user.timezone,
+    );
+    return (
+      <main>
+        <CalendarWorkspace events={events} courses={courses} />
+      </main>
+    );
+  } catch (error) {
+    return (
+      <main className="p-8 md:p-10">
+        <p className="text-error">
+          Couldn&apos;t load your calendar: {error instanceof Error ? error.message : String(error)}
+        </p>
+      </main>
+    );
+  }
 }
