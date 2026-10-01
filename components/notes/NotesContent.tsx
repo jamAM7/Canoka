@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import type { Subject } from "@/lib/scraper/subjects";
 import { newId } from "@/lib/calendar/kanban";
-import { loadNotes, saveNotes, type Note } from "@/lib/notes/storage";
+import { loadNotes, noteText, saveNotes, type Note } from "@/lib/notes/storage";
 import { ChevronIcon, PanelIcon, PlusIcon } from "@/components/shell/icons";
+import { NoteEditor } from "./NoteEditor";
 
 interface Props {
   subjects: Subject[];
@@ -41,21 +42,20 @@ function inListOrder(notes: Note[], subjects: Subject[]): Note[] {
   return groupNotes(notes, subjects).flatMap((g) => g.notes);
 }
 
+/** A note's first line of text, for its preview in the list. */
+function firstLine(content: string): string {
+  return noteText(content).split("\n").map((line) => line.trim()).find(Boolean) ?? "";
+}
+
 // Notes view: the student's notes grouped by subject in a collapsible list on
 // the left, the selected note on the right.
 // TODO: load real notes from `subjects` + `notes` and save edits back.
 export function NotesContent({ subjects }: Props) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [listOpen, setListOpen] = useState(true);
   const [closedGroups, setClosedGroups] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
-
-  const open = (id: string | null) => {
-    setActiveId(id);
-    setConfirmDelete(false);
-  };
 
   // Read saved notes after mount so server and client render the same markup.
   useEffect(() => {
@@ -79,14 +79,14 @@ export function NotesContent({ subjects }: Props) {
 
   // Opens the subject's group too, so the new note shows in the list.
   const addNote = (subjectId: string) => {
-    const note: Note = { id: newId("note"), courseId: subjectId, title: "", body: "" };
+    const note: Note = { id: newId("note"), courseId: subjectId, title: "", content: "" };
     setNotes((prev) => [note, ...prev]);
     setClosedGroups((prev) => {
       const next = new Set(prev);
       next.delete(subjectId);
       return next;
     });
-    open(note.id);
+    setActiveId(note.id);
   };
 
   const updateNote = (id: string, patch: Partial<Note>) => {
@@ -98,7 +98,7 @@ export function NotesContent({ subjects }: Props) {
     const list = inListOrder(notes, subjects);
     const i = list.findIndex((n) => n.id === id);
     setNotes((prev) => prev.filter((n) => n.id !== id));
-    open((list[i + 1] ?? list[i - 1])?.id ?? null);
+    setActiveId((list[i + 1] ?? list[i - 1])?.id ?? null);
   };
 
   const groups = groupNotes(notes, subjects);
@@ -185,11 +185,11 @@ export function NotesContent({ subjects }: Props) {
                           key={note.id}
                           type="button"
                           className={`note-item${note.id === activeId ? " active" : ""}`}
-                          onClick={() => open(note.id)}
+                          onClick={() => setActiveId(note.id)}
                         >
                           <div className="note-item-title">{note.title || "Untitled"}</div>
                           <p className="note-item-preview">
-                            {note.body.trim().split("\n")[0] || "No text yet"}
+                            {firstLine(note.content) || "No text yet"}
                           </p>
                         </button>
                       ))
@@ -203,55 +203,12 @@ export function NotesContent({ subjects }: Props) {
 
         <section className="note-editor">
           {active ? (
-            <>
-              <div className="note-editor-toolbar">
-                {confirmDelete ? (
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    <span className="text-sm text-text">Delete this note?</span>
-                    <button
-                      type="button"
-                      onClick={() => deleteNote(active.id)}
-                      className="rounded-md bg-error px-3 py-1.5 text-sm font-medium text-white hover:bg-error/90"
-                    >
-                      Delete
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDelete(false)}
-                      className="rounded-md px-3 py-1.5 text-sm font-medium text-text-muted hover:bg-surface-muted hover:text-text"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(true)}
-                    className="rounded-md px-2 py-1.5 text-sm font-medium text-error hover:bg-error/10"
-                  >
-                    Delete note
-                  </button>
-                )}
-              </div>
-
-              {/* Keyed per note so a new, empty note opens with the cursor in its title. */}
-              <input
-                key={active.id}
-                className="note-editor-title"
-                value={active.title}
-                onChange={(e) => updateNote(active.id, { title: e.target.value })}
-                placeholder="Untitled"
-                aria-label="Note title"
-                autoFocus={!active.title && !active.body}
-              />
-              <textarea
-                className="note-editor-body"
-                value={active.body}
-                onChange={(e) => updateNote(active.id, { body: e.target.value })}
-                placeholder="Start typing your notes…"
-                aria-label="Note content"
-              />
-            </>
+            <NoteEditor
+              key={active.id}
+              note={active}
+              onChange={(patch) => updateNote(active.id, patch)}
+              onDelete={() => deleteNote(active.id)}
+            />
           ) : (
             <p className="text-text-muted">
               {notes.length > 0

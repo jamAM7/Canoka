@@ -910,11 +910,17 @@ h6 {
     padding: var(--space-8);
 }
 
+/* Formatting on the left, Delete note on the right. */
 .note-editor-toolbar {
     display: flex;
-    justify-content: flex-end;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
 
     margin-bottom: var(--space-4);
+    padding-bottom: var(--space-3);
+    border-bottom: var(--border-width) solid var(--color-border-light);
 }
 
 .note-editor-title {
@@ -936,25 +942,159 @@ h6 {
     flex-direction: column;
 }
 
-.note-editor-body {
-    flex: 1;
-    width: 100%;
+.note-editor-title::placeholder {
+    color: var(--color-text-muted);
+}
+
+/* The note's text: the editable element TipTap renders. Tailwind's reset
+   strips headings, lists and quotes of their looks, so they're set here. */
+.note-editor-content {
     min-height: 480px;
-
-    border: 0;
     outline: 0;
-    resize: none;
 
-    background: transparent;
     color: var(--color-text);
-
-    font: inherit;
     line-height: 1.7;
 }
 
-.note-editor-body::placeholder,
-.note-editor-title::placeholder {
+.note-editor-content > * + * {
+    margin-top: 0.75em;
+}
+
+.note-editor-content p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+
     color: var(--color-text-muted);
+    pointer-events: none;
+}
+
+.note-editor-content h1,
+.note-editor-content h2,
+.note-editor-content h3 {
+    margin-top: 1.25em;
+    line-height: var(--line-height-tight);
+}
+
+.note-editor-content > :first-child {
+    margin-top: 0;
+}
+
+.note-editor-content h1 {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+}
+
+.note-editor-content h2 {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+}
+
+.note-editor-content h3 {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+}
+
+.note-editor-content ul,
+.note-editor-content ol {
+    padding-left: 1.5em;
+}
+
+.note-editor-content ul {
+    list-style: disc;
+}
+
+.note-editor-content ol {
+    list-style: decimal;
+}
+
+.note-editor-content li > p,
+.note-editor-content td > p,
+.note-editor-content th > p {
+    margin: 0;
+}
+
+.note-editor-content blockquote {
+    padding-left: 1em;
+    border-left: 3px solid var(--color-border);
+    color: var(--color-text-muted);
+}
+
+.note-editor-content code {
+    padding: 0.1em 0.35em;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-muted);
+    font-size: 0.9em;
+}
+
+.note-editor-content pre {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-muted);
+    overflow-x: auto;
+}
+
+.note-editor-content pre code {
+    padding: 0;
+    background: none;
+}
+
+.note-editor-content a {
+    color: var(--color-primary);
+    text-decoration: underline;
+}
+
+.note-editor-content hr {
+    border: 0;
+    border-top: var(--border-width) solid var(--color-border);
+}
+
+/* Tables, with the classes TipTap adds for resizing and selecting cells. */
+.note-editor-content .tableWrapper {
+    overflow-x: auto;
+}
+
+.note-editor-content table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.note-editor-content th,
+.note-editor-content td {
+    position: relative;
+    min-width: 3em;
+    padding: var(--space-1) var(--space-2);
+    border: var(--border-width) solid var(--color-border);
+    vertical-align: top;
+}
+
+.note-editor-content th {
+    background: var(--color-surface-muted);
+    font-weight: var(--font-weight-semibold);
+    text-align: left;
+}
+
+.note-editor-content .selectedCell::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(142, 202, 230, 0.25);
+    pointer-events: none;
+}
+
+.note-editor-content .column-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -2px;
+    bottom: -2px;
+    width: 4px;
+    background: var(--color-primary-light);
+    pointer-events: none;
+}
+
+.note-editor-content.resize-cursor {
+    cursor: col-resize;
 }
 
 

@@ -122,6 +122,49 @@ export function ChecklistIcon({ className }: IconProps) {
   );
 }
 
+export function BulletListIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M9.5 6.5h10M9.5 12h10M9.5 17.5h10" />
+      <path d="M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" strokeWidth="3" />
+    </svg>
+  );
+}
+
+export function NumberedListIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M10.5 7h9.5M10.5 17h9.5" />
+      <path d="M4 5.5 5.5 4.5V10M3.8 15.2c.3-.9 2.9-1 2.9.5 0 1.1-2.9 1.9-2.9 3.3h3" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+export function QuoteIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M6 17c2-1 3-3 3-5.5V8H5v4h4M15 17c2-1 3-3 3-5.5V8h-4v4h4" />
+    </svg>
+  );
+}
+
+export function CodeIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M9 7.5 4.5 12 9 16.5M15 7.5l4.5 4.5-4.5 4.5" />
+    </svg>
+  );
+}
+
+export function TableIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+      <path d="M3.5 9.5h17M3.5 14.5h17M9.2 4.5v15M14.8 4.5v15" />
+    </svg>
+  );
+}
+
 export function CloseIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden="true">

@@ -1,15 +1,29 @@
 // Settings: Canvas connection, calendar subscriptions, notification prefs.
-// TODO: settings form.
-import { ComingSoon } from "@/components/shell/ComingSoon";
+// TODO: calendar subscriptions and notification preferences.
+import { Sidebar } from "@/components/shell/Sidebar";
+import { ScraperSettings } from "@/components/settings/ScraperSettings";
+import { scrapeProgress, scraperSetup } from "@/lib/scraper/runner";
+import { lastScrape } from "@/lib/scraper/subjects";
 
 export const metadata = { title: "Settings · Canoka" };
 
-export default function SettingsPage() {
+// The scraper's setup, last scrape and any running scrape are read on every request.
+export const dynamic = "force-dynamic";
+
+export default async function SettingsPage() {
   return (
-    <ComingSoon
-      active="settings"
-      title="Settings"
-      description="Connect Canvas, manage calendar subscriptions and choose your notification preferences."
-    />
+    <div className="app-shell">
+      <Sidebar active="settings" />
+      <main className="main">
+        <div className="space-y-6 p-8 md:p-10">
+          <header className="px-2 pt-2">
+            <h1 className="text-3xl font-bold tracking-tight text-text md:text-4xl">Settings</h1>
+            <p className="mt-1 text-sm text-text-muted">Connect Canvas and pull your subjects into Canoka.</p>
+          </header>
+
+          <ScraperSettings setup={scraperSetup()} lastScrape={await lastScrape()} progress={scrapeProgress()} />
+        </div>
+      </main>
+    </div>
   );
 }
