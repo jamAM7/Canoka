@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { NoteDoc, NotesSubject } from "@/lib/notes/types";
 import { docText } from "@/lib/notes/text";
-import { loadReviews, reviewKey, saveReviews, type Note, type SavedReview } from "@/lib/notes/storage";
+import { reviewKey, toSavedReview, type Note, type SavedReview } from "@/lib/notes/storage";
 import { ChevronIcon, PanelIcon, PlusIcon, SparkleIcon } from "@/components/shell/icons";
 import { NoteEditor } from "./NoteEditor";
 import { WeekReview } from "./WeekReview";
@@ -95,7 +95,6 @@ export function NotesContent({ subjects, initialNotes }: Props) {
   const [reviews, setReviews] = useState<Record<string, SavedReview>>({});
   const [reviewing, setReviewing] = useState<string | null>(null);
   const [reviewError, setReviewError] = useState<{ key: string; message: string } | null>(null);
-  const [loaded, setLoaded] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Edits wait here until typing pauses. One request per note at a time, so saves land in order.
@@ -111,13 +110,7 @@ export function NotesContent({ subjects, initialNotes }: Props) {
     // Every subject lists a whole session of weeks, so only the open note's starts expanded.
     const open = first?.courseId ?? subjects[0]?.id;
     setClosed(new Set(subjects.map((s) => s.id).filter((id) => id !== open)));
-    setReviews(loadReviews());
-    setLoaded(true);
   }, [subjects, initialNotes]);
-
-  useEffect(() => {
-    if (loaded) saveReviews(reviews);
-  }, [reviews, loaded]);
 
   // Sends a note's waiting edits now. `unload` lets the request outlive the page.
   const flush = (id: string, unload = false) => {
@@ -239,36 +232,38 @@ export function NotesContent({ subjects, initialNotes }: Props) {
       .catch(() => setSaveError("Couldn't reach the app's server."));
   };
 
+  // The review reads the week's notes from the database, so edits still waiting to be saved go first.
+  const saveBeforeReview = async (ids: string[]) => {
+    ids.forEach((id) => flush(id));
+    const deadline = Date.now() + 10_000;
+    while (ids.some((id) => pending.current.has(id) || saving.current.has(id))) {
+      if (Date.now() > deadline) return false;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    return true;
+  };
+
   const reviewWeek = async (subjectId: string, week: number) => {
     const key = reviewKey(subjectId, week);
-    const weekNotes = notes.filter((n) => n.courseId === subjectId && n.week === week);
     setReviewing(key);
     setReviewError(null);
     try {
+      const ids = notes.filter((n) => n.courseId === subjectId && n.week === week).map((n) => n.id);
+      if (!(await saveBeforeReview(ids))) {
+        setReviewError({ key, message: "Your latest edits haven't saved yet. Try again once they have." });
+        return;
+      }
       const res = await fetch("/api/notes/review", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // Until the review reads from the database it still takes the Canvas course id and the notes' text.
-        body: JSON.stringify({
-          subjectId: subjects.find((s) => s.id === subjectId)?.externalId,
-          week,
-          notes: weekNotes.map(({ title, content }) => ({ title, content: docText(content) })),
-        }),
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ courseId: subjectId, week }),
       });
       const data = await res.json();
       if (!res.ok) {
         setReviewError({ key, message: data.error ?? "The review didn't work. Try again." });
         return;
       }
-      setReviews((prev) => ({
-        ...prev,
-        [key]: {
-          at: new Date().toISOString(),
-          notes: weekNotes.length,
-          hadCourseContent: data.hadCourseContent,
-          review: data.review,
-        },
-      }));
+      setReviews((prev) => ({ ...prev, [key]: toSavedReview(data.review, data.staleReason) }));
     } catch {
       setReviewError({ key, message: "Couldn't reach the app's server." });
     } finally {
@@ -281,6 +276,21 @@ export function NotesContent({ subjects, initialNotes }: Props) {
   const activeSubject = active ? subjects.find((s) => s.id === active.courseId) : undefined;
   const activeWeek = active?.week ?? null;
   const activeReviewKey = activeSubject && activeWeek !== null ? reviewKey(activeSubject.id, activeWeek) : null;
+
+  // Reviews are stored in the database: opening a week's note shows that week's latest.
+  const askedReviews = useRef(new Set<string>());
+  useEffect(() => {
+    if (!activeSubject || activeWeek === null || !activeReviewKey) return;
+    if (reviews[activeReviewKey] || askedReviews.current.has(activeReviewKey)) return;
+    const key = activeReviewKey;
+    askedReviews.current.add(key);
+    fetch(`/api/notes/review?courseId=${activeSubject.id}&week=${activeWeek}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.review) setReviews((prev) => (prev[key] ? prev : { ...prev, [key]: toSavedReview(data.review) }));
+      })
+      .catch(() => askedReviews.current.delete(key));
+  }, [activeReviewKey]);
 
   const noteButton = (note: Note) => (
     <button

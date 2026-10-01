@@ -170,3 +170,18 @@ export interface NoteRow {
   created_at: string;
   updated_at: string;
 }
+
+export interface WeekReviewRow {
+  id: string;
+  user_id: string;
+  course_id: string;
+  module_id: string;
+  /** The review: lib/ai/review's NotesReview. */
+  content: unknown;
+  model_name: string | null;
+  note_count: number;
+  had_course_content: boolean;
+  content_stale: boolean;
+  content_updated_at: string | null;
+  created_at: string;
+}

@@ -60,8 +60,19 @@ export function WeekReview({ label, saved, reviewing, error }: Props) {
         <div className="mt-3 space-y-4 text-sm">
           {!saved.hadCourseContent && (
             <p className="text-text-muted">
-              The last Canvas scrape had nothing for {label}, so this checks your notes on their own rather than
+              There was no course content saved for {label}, so this checks your notes on their own rather than
               against the course.
+            </p>
+          )}
+          {saved.contentStale && (
+            <p className="text-secondary-dark">
+              Canvas couldn&apos;t be reached{saved.staleReason ? ` (${saved.staleReason})` : ""}, so this used course
+              content saved earlier. It may be out of date.
+            </p>
+          )}
+          {saved.hadCourseContent && saved.contentUpdatedAt && (
+            <p className="text-text-muted">
+              Checked against course content saved {format(new Date(saved.contentUpdatedAt), "d MMM, h:mm a")}.
             </p>
           )}
           <p className="text-text">{review.summary}</p>

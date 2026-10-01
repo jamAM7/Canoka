@@ -1,4 +1,5 @@
 import type { JSONContent } from "@tiptap/core";
+import type { NotesReview } from "@/lib/ai/review";
 
 // What the notes API and the Notes page pass between them. No server imports,
 // so both can use it.
@@ -46,4 +47,25 @@ export interface NotesOverview {
   subjects: NotesSubject[];
   /** The student's notes that aren't archived, newest edit first. */
   notes: NoteDto[];
+}
+
+/** A stored AI review of a week's notes: what POST and GET /api/notes/review return as `review`. */
+export interface WeekReviewDto {
+  id: string;
+  createdAt: string;
+  courseId: string;
+  /** The week's canonical module when the review was made. */
+  moduleId: string;
+  week: number;
+  /** The model that wrote it. */
+  modelName: string | null;
+  /** How many notes it covered. */
+  noteCount: number;
+  /** Whether there was course content for the week to check the notes against. */
+  hadCourseContent: boolean;
+  /** True when Canvas couldn't be reached and the content already stored was used: it may be out of date. */
+  contentStale: boolean;
+  /** When the week's course content was last saved to the database, or null if there is none. */
+  contentUpdatedAt: string | null;
+  content: NotesReview;
 }
