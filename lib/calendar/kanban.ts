@@ -45,7 +45,13 @@ export function statusOf(ev: CalendarEvent): TaskStatus {
 }
 
 function byDue(a: CalendarEvent, b: CalendarEvent): number {
-  return +new Date(a.dueDate ?? a.start) - +new Date(b.dueDate ?? b.start);
+  return dueTime(a) - dueTime(b);
+}
+
+/** Cards with no date at all, like an assessment Canvas gives no due date, sort last. */
+function dueTime(ev: CalendarEvent): number {
+  const when = ev.dueDate ?? ev.start;
+  return when ? +new Date(when) : Number.MAX_SAFE_INTEGER;
 }
 
 /** Cards per column id, in board order. Unplaced cards are appended by due date. */

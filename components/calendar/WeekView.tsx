@@ -8,7 +8,7 @@ import {
   isToday,
   startOfWeek,
 } from "date-fns";
-import type { CalendarEvent, Course } from "@/types/calendar";
+import type { Course } from "@/types/calendar";
 import {
   DAY_END_HOUR,
   DAY_START_HOUR,
@@ -18,12 +18,13 @@ import {
   formatEventTime,
   gridPlacement,
   layoutDayColumn,
+  type ScheduledEvent,
 } from "@/lib/calendar/event-utils";
 import { courseTone } from "@/lib/calendar/colors";
 
 interface Props {
   anchor: Date;
-  events: CalendarEvent[];
+  events: ScheduledEvent[];
   courseById: Map<string, Course>;
   onSelect: (id: string) => void;
 }
@@ -49,6 +50,9 @@ export function WeekView({ anchor, events, courseById, onSelect }: Props) {
     }
   }, [anchor]);
 
+  // Assessments are deadlines, not blocks of time: they're flagged in the day
+  // header, and the time grid holds classes and tasks.
+  const booked = events.filter((ev) => ev.type !== "assessment");
   const dueByDay = (day: Date) =>
     events.filter(
       (ev) =>
@@ -103,7 +107,7 @@ export function WeekView({ anchor, events, courseById, onSelect }: Props) {
 
         {/* Day columns */}
         {days.map((day) => {
-          const laid = layoutDayColumn(eventsOnDay(events, day));
+          const laid = layoutDayColumn(eventsOnDay(booked, day));
           return (
             <div
               key={day.toISOString()}
@@ -137,10 +141,7 @@ export function WeekView({ anchor, events, courseById, onSelect }: Props) {
                       event.status === "done" ? "opacity-60" : ""
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      {event.type === "assessment" && <span className="text-xs">◆</span>}
-                      <span className="truncate font-medium">{event.title}</span>
-                    </div>
+                    <div className="truncate font-medium">{event.title}</div>
                     <div className="text-xs opacity-75 truncate">{formatEventTime(event)}{event.location ? ` · ${event.location}` : ""}</div>
                   </button>
                 );
