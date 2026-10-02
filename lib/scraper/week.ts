@@ -13,7 +13,7 @@ const run = promisify(execFile);
  */
 export async function loadWeekContent(subjectId: string, week: number): Promise<string | null> {
   if (!existsSync(PYTHON)) {
-    throw new Error("There's no Python virtualenv at .venv. Set it up as the README describes.");
+    throw new Error("There's no Python virtualenv at .venv. Run npm run setup:python to create it.");
   }
   try {
     const { stdout } = await run(PYTHON, ["week.py", subjectId, String(week), "--json"], {

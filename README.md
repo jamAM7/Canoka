@@ -65,6 +65,7 @@ Canoka pulls course content and deadlines from Canvas, turns them into organised
 
 ### Prerequisites
 - Node.js 20+
+- Python 3.9+ (only the interpreter: `npm install` sets up the packages)
 - A [Supabase]() account
 - A Canvas API token (Canvas → Account → Settings → New Access Token)
 
@@ -74,6 +75,32 @@ Canoka pulls course content and deadlines from Canvas, turns them into organised
 npm install
 cp .env.example .env.local
 ```
+
+`npm install` also creates the Python virtualenv at `.venv` and installs
+`scraper/requirements.txt` and `llm/requirements.txt` into it, the same way on
+macOS, Windows and Linux. `npm run dev` checks again first and reinstalls only
+when a requirements file has changed, so pulling a teammate's new dependency
+needs nothing extra.
+
+Neither command ever fails because of Python: they warn and carry on, since
+only the scraper needs it.
+
+- **No Python found.** Install Python 3.9 or later and run `npm run setup:python`.
+- **On Debian or Ubuntu,** also run `sudo apt install python3-venv` first.
+- **A package won't install** on your platform or Python version (very new
+  Python releases often lack builds at first). Everything else still goes
+  in, and the warning names what's missing.
+- **To use a different Python,** delete `.venv` and run
+  `npm run setup:python` with `PYTHON` set to its path.
+
+`npm run setup:python` reinstalls everything and exits non-zero if anything is
+missing. Set `SKIP_PYTHON_SETUP=1` to turn off the automatic check. It never
+runs in CI or on Vercel, where the scraper is off anyway.
+
+To add a Python dependency, add it to the relevant `requirements.txt` and
+commit. Everyone else gets it the next time they run `npm run dev`. The
+[Python setup workflow](.github/workflows/python-setup.yml) then checks it
+installs on Windows, macOS and Linux.
 
 ### Environment variables
 
@@ -106,8 +133,6 @@ A whole subject is roughly 100k tokens of JSON. The module view for the week
 being asked about is roughly 1k. Only the second belongs in a request.
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -r scraper/requirements.txt
 cp scraper/.env.example scraper/.env    # add CANVAS_BASE_URL and CANVAS_API_TOKEN
 
 cd scraper
@@ -117,12 +142,8 @@ cd scraper
 ../.venv/bin/python selftest.py                     # no network, no token needed
 ```
 
-On Windows the venv puts things elsewhere, but nothing else changes:
-
-```
-py -m venv .venv
-.venv\Scripts\pip install -r scraper\requirements.txt
-```
+`.venv` comes from `npm install` (see [Install](#install)). On Windows its
+Python is `..\.venv\Scripts\python` rather than `../.venv/bin/python`.
 
 The requirements file installs correctly on every platform without editing.
 [scraper/README.md](scraper/README.md) covers why, along with the document

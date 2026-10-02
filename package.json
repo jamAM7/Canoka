@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "node scripts/setup-python.mjs",
+    "setup:python": "node scripts/setup-python.mjs",
+    "predev": "node scripts/setup-python.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
