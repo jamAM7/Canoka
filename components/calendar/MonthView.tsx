@@ -10,15 +10,12 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-<<<<<<< HEAD
-import type { CalendarEvent, Course } from "@/types/calendar";
-import { WEEK_OPTS, eventsOnDay } from "@/lib/calendar/event-utils";
-import { courseTone } from "@/types/calendar";
-=======
-import type { Course } from "@/types/calendar";
-import { WEEK_OPTS, eventsOnDay, type ScheduledEvent } from "@/lib/calendar/event-utils";
-import { courseTone } from "@/lib/calendar/colors";
->>>>>>> origin/main
+import { courseTone, type Course } from "@/types/calendar";
+import {
+  WEEK_OPTS,
+  eventsOnDay,
+  type ScheduledEvent,
+} from "@/lib/calendar/event-utils";
 
 interface Props {
   anchor: Date;
