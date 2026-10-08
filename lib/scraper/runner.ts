@@ -17,7 +17,7 @@ import { readCanvasEnv } from "./env";
 // a time, and keeps its output so the page can follow along. Server-only.
 
 export const SCRAPER_DIR = path.join(process.cwd(), "scraper");
-// The virtualenv the README sets up at the repo root.
+// The virtualenv scripts/setup-python.mjs creates at the repo root.
 export const PYTHON =
   process.platform === "win32"
     ? path.join(process.cwd(), ".venv", "Scripts", "python.exe")
@@ -43,7 +43,7 @@ export function startScrape(options: ScrapeOptions): void {
   if (previous?.status === "running") throw new ScrapeBusyError("A scrape is already running.");
   if (!existsSync(PYTHON)) {
     throw new Error(
-      `No Python at ${path.relative(process.cwd(), PYTHON)}. Set up the virtualenv as the README describes.`,
+      `No Python at ${path.relative(process.cwd(), PYTHON)}. Run npm run setup:python to create it.`,
     );
   }
 

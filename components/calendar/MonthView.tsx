@@ -10,13 +10,13 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import type { CalendarEvent, Course } from "@/types/calendar";
-import { WEEK_OPTS, eventsOnDay } from "@/lib/calendar/event-utils";
+import type { Course } from "@/types/calendar";
+import { WEEK_OPTS, eventsOnDay, type ScheduledEvent } from "@/lib/calendar/event-utils";
 import { courseTone } from "@/lib/calendar/colors";
 
 interface Props {
   anchor: Date;
-  events: CalendarEvent[];
+  events: ScheduledEvent[];
   courseById: Map<string, Course>;
   onSelect: (id: string) => void;
   onPickDay: (d: Date) => void;
@@ -88,7 +88,9 @@ export function MonthView({
                             style={{ background: tone.bg, color: tone.fg }}
                           >
                             <span className="h-2.5 w-2.5 rounded-full" style={{ background: tone.solid }} />
-                            <span className="tabular-nums text-xs opacity-75">{format(new Date(ev.start), "h:mm")}</span>
+                            <span className="tabular-nums text-xs opacity-75">
+                              {ev.type === "assessment" ? "Due" : format(new Date(ev.start), "h:mm")}
+                            </span>
                             <span className="truncate">{ev.title}</span>
                           </button>
                         );

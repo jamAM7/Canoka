@@ -1,110 +1,136 @@
 import type { CalendarEvent, KanbanBoard } from "@/types/calendar";
 import { STATUS_ORDER } from "./event-utils";
 
-// The calendar's events come from Supabase, but the student's edits (card
-// details, moves, rescheduling, tasks they add, board columns) stay in this
-// browser's localStorage until they're written back to the database.
+// Until Supabase is wired up, the calendar keeps the student's edits (new
+// tasks, card details, moves, board columns) in this browser's localStorage.
 //
-// What's saved is only what the student changed, so the server's copy still
-// wins for everything else: a new due date or a renamed assessment in Canvas
-// shows up even on an event the student has edited. Bump the key's version if
-// the saved shape changes incompatibly.
+// Only the changes are stored, not the whole event list. On load they're laid
+// back over the events the page was given, the assessments from the last
+// Canvas scrape, so a new scrape's due dates and assessments still come
+// through instead of a copy saved before it.
+// Bump the key's version if the saved shape changes incompatibly.
 const KEY = "canoka.calendar.v2";
-/** Mock-data era: whole events. Only the student's own tasks and the board carry over. */
 const OLD_KEY = "canoka.calendar.v1";
 
-/** The fields a student can change on an event from the server. */
-const EDITABLE = [
-  "title",
-  "status",
-  "start",
-  "end",
-  "dueDate",
-  "notes",
-  "priority",
-  "labels",
-  "checklist",
-] as const satisfies readonly (keyof CalendarEvent)[];
-
-export interface SavedCalendar {
+export interface CalendarState {
   events: CalendarEvent[];
   board: KanbanBoard;
 }
 
-interface Stored {
-  /** Events the student made, which the server doesn't know about. */
-  added: CalendarEvent[];
-  /** Changed fields, by the id of the server event they apply to. */
-  edits: Record<string, Partial<CalendarEvent>>;
-  /** Server events the student deleted. */
+/** Changed fields of one event; `null` marks a field the student cleared. */
+type Patch = Record<string, unknown>;
+
+interface SavedChanges {
+  edited: Record<string, Patch>;
   removed: string[];
+  added: CalendarEvent[];
   board: KanbanBoard;
 }
 
-/** The server's events with this browser's edits applied, or null if nothing is saved. */
-export function loadCalendar(server: CalendarEvent[]): SavedCalendar | null {
+/** `base` is the event list the page was rendered with. */
+export function loadCalendar(base: CalendarEvent[]): CalendarState | null {
   try {
-    const stored = readStored() ?? readOld();
-    if (!stored) return null;
-    const removed = new Set(stored.removed);
-    const serverIds = new Set(server.map((ev) => ev.id));
-    const events = server
-      .filter((ev) => !removed.has(ev.id))
-      .map((ev) => ({ ...ev, ...stored.edits[ev.id] }))
-      .concat(stored.added.filter((ev) => !serverIds.has(ev.id)));
-    return { events, board: stored.board };
+    const changes = readChanges();
+    return changes && applyChanges(base, changes);
   } catch {
     return null;
   }
 }
 
-/** Saves how `state` differs from the server's events. */
-export function saveCalendar(server: CalendarEvent[], state: SavedCalendar): void {
-  const byId = new Map(server.map((ev) => [ev.id, ev]));
-  const current = new Set(state.events.map((ev) => ev.id));
-  const stored: Stored = {
-    added: state.events.filter((ev) => !byId.has(ev.id)),
-    edits: {},
-    removed: server.filter((ev) => !current.has(ev.id)).map((ev) => ev.id),
-    board: state.board,
-  };
-  for (const ev of state.events) {
-    const original = byId.get(ev.id);
-    if (!original) continue;
-    const patch: Partial<CalendarEvent> = {};
-    for (const field of EDITABLE) {
-      if (JSON.stringify(ev[field]) !== JSON.stringify(original[field])) {
-        (patch as Record<string, unknown>)[field] = ev[field];
-      }
-    }
-    if (Object.keys(patch).length > 0) stored.edits[ev.id] = patch;
-  }
+export function saveCalendar(base: CalendarEvent[], state: CalendarState): void {
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(stored));
+    window.localStorage.setItem(KEY, JSON.stringify(diff(base, state)));
   } catch {
     // Storage blocked or full: keep working in memory for this session.
   }
 }
 
-function readStored(): Stored | null {
+function readChanges(): SavedChanges | null {
   const raw = window.localStorage.getItem(KEY);
-  if (!raw) return null;
-  const data = JSON.parse(raw);
-  if (!isBoard(data?.board) || !Array.isArray(data?.added) || !Array.isArray(data?.removed)) return null;
-  const edits = data.edits && typeof data.edits === "object" && !Array.isArray(data.edits) ? data.edits : {};
-  return { added: data.added, edits, removed: data.removed, board: data.board };
+  if (raw) {
+    const data = JSON.parse(raw);
+    return isChanges(data) ? data : null;
+  }
+  return migrateOldCopy();
 }
 
-/** v1 saved whole mock events. Keep the tasks the student added from the board (ids "task-…"), and the board. */
-function readOld(): Stored | null {
+// v1 saved the whole event list, back when it was mock data. Keep the board and
+// the tasks the student added (createTask ids start "task-"); the mock events,
+// and edits to them, belong to no real subject.
+function migrateOldCopy(): SavedChanges | null {
   const raw = window.localStorage.getItem(OLD_KEY);
   if (!raw) return null;
   const data = JSON.parse(raw);
   if (!Array.isArray(data?.events) || !isBoard(data?.board)) return null;
-  const added = (data.events as CalendarEvent[]).filter(
-    (ev) => typeof ev?.id === "string" && ev.id.startsWith("task-") && !ev.parentId,
+
+  const changes: SavedChanges = {
+    edited: {},
+    removed: [],
+    added: data.events.filter((ev: { id?: unknown }) => String(ev?.id).startsWith("task-")),
+    board: data.board,
+  };
+  window.localStorage.setItem(KEY, JSON.stringify(changes));
+  window.localStorage.removeItem(OLD_KEY);
+  return changes;
+}
+
+function diff(base: CalendarEvent[], state: CalendarState): SavedChanges {
+  const baseById = new Map(base.map((ev) => [ev.id, ev]));
+  const kept = new Set(state.events.map((ev) => ev.id));
+  const edited: Record<string, Patch> = {};
+  const added: CalendarEvent[] = [];
+
+  for (const ev of state.events) {
+    const orig = baseById.get(ev.id);
+    if (!orig) {
+      added.push(ev);
+      continue;
+    }
+    const patch: Patch = {};
+    const keys = Object.keys(orig).concat(Object.keys(ev));
+    for (const key of keys.filter((k, i) => keys.indexOf(k) === i)) {
+      const before = orig[key as keyof CalendarEvent];
+      const after = ev[key as keyof CalendarEvent];
+      if (JSON.stringify(before) !== JSON.stringify(after)) patch[key] = after ?? null;
+    }
+    if (Object.keys(patch).length) edited[ev.id] = patch;
+  }
+
+  return {
+    edited,
+    removed: base.filter((ev) => !kept.has(ev.id)).map((ev) => ev.id),
+    added,
+    board: state.board,
+  };
+}
+
+function applyChanges(base: CalendarEvent[], changes: SavedChanges): CalendarState {
+  const removed = new Set(changes.removed);
+  const events = base
+    .filter((ev) => !removed.has(ev.id))
+    .map((ev) => {
+      const patch = changes.edited[ev.id];
+      if (!patch) return ev;
+      const next: Record<string, unknown> = { ...ev };
+      for (const [key, value] of Object.entries(patch)) {
+        if (value === null) delete next[key];
+        else next[key] = value;
+      }
+      return next as unknown as CalendarEvent;
+    });
+  return { events: [...events, ...changes.added], board: changes.board };
+}
+
+function isChanges(value: unknown): value is SavedChanges {
+  const data = value as SavedChanges | null;
+  return (
+    !!data &&
+    typeof data.edited === "object" &&
+    data.edited !== null &&
+    Array.isArray(data.removed) &&
+    Array.isArray(data.added) &&
+    isBoard(data.board)
   );
-  return { added, edits: {}, removed: [], board: data.board };
 }
 
 function isBoard(value: unknown): value is KanbanBoard {

@@ -17,7 +17,7 @@ import type {
   KanbanBoard,
   TaskStatus,
 } from "@/types/calendar";
-import { WEEK_OPTS } from "@/lib/calendar/event-utils";
+import { WEEK_OPTS, isScheduled } from "@/lib/calendar/event-utils";
 import {
   DEFAULT_BOARD,
   addColumn,
@@ -53,10 +53,10 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [board, setBoard] = useState<KanbanBoard>(DEFAULT_BOARD);
 
-  // Restore the student's saved calendar after mount (localStorage doesn't
-  // exist during server rendering), then save whenever events or the board
-  // change. The first save pass is skipped: it would only write back what was
-  // just restored, or freeze the mock data before anything was edited.
+  // Restore the student's saved edits after mount (localStorage doesn't exist
+  // during server rendering), then save whenever events or the board change.
+  // The first save pass is skipped: it would only write back what was just
+  // restored.
   const [restored, setRestored] = useState(false);
   const skipNextSave = useRef(true);
 
@@ -101,6 +101,10 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
       ),
     [events, hiddenCourses, hiddenTypes],
   );
+
+  // Week and month show what has a date; the board also has the assessments
+  // Canvas gives no due date.
+  const calendarEvents = useMemo(() => visibleEvents.filter(isScheduled), [visibleEvents]);
 
   const selected = selectedId
     ? events.find((e) => e.id === selectedId) ?? null
@@ -235,7 +239,7 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
           {view === "week" && (
             <WeekView
               anchor={anchor}
-              events={visibleEvents}
+              events={calendarEvents}
               courseById={courseById}
               onSelect={setSelectedId}
             />
@@ -243,7 +247,7 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
           {view === "month" && (
             <MonthView
               anchor={anchor}
-              events={visibleEvents}
+              events={calendarEvents}
               courseById={courseById}
               onSelect={setSelectedId}
               onPickDay={(d) => {

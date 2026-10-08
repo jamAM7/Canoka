@@ -14,8 +14,8 @@ to built, rather than trusting the README alone to reflect reality.
 
 | Feature | README says | Status |
 |---|---|---|
-| **Calendar** | UTS + external calendars, Canvas assessments, classes/assessments/tasks, subtasks | **Built** (frontend, on mock data) |
-| **Dashboard** | Notifications, "due this week", quick links into notes | **Built** (frontend, on mock data) |
+| **Calendar** | UTS + external calendars, Canvas assessments, classes/assessments/tasks, subtasks | **Built** (frontend, on scraped Canvas data) |
+| **Dashboard** | Notifications, "due this week", quick links into notes | **Built** (frontend, on scraped Canvas data) |
 | **Notes** | Canvas content → AI notes, per-subject/per-week, word-editor view | Stub page only |
 | **Settings** | Canvas connection, calendar subscriptions, preferences | Stub page only |
 | **Sign up** | Single-role (student) auth | Stub page only |
@@ -23,9 +23,11 @@ to built, rather than trusting the README alone to reflect reality.
 | **Canvas integration** (`lib/canvas`) | REST API wrapper | Not started |
 | **AI integration** (`lib/ai`) | Note generation | Not started |
 
-Nothing is wired to a real backend yet — Calendar and Dashboard both run on
-the same mock dataset (`lib/calendar/mock-data.ts`). Calendar edits are kept
-in the browser's localStorage only (see section 4).
+Nothing is wired to a real backend yet. Calendar and Dashboard both read the
+subjects and assessments from the Canvas scraper's last run
+(`lib/scraper/calendar.ts`, reading `scraper/out`), so they're empty until the
+scraper has run on the machine serving the app. Calendar edits are kept in the
+browser's localStorage only (see section 4).
 
 ---
 
@@ -53,9 +55,9 @@ don't collide with the handoff's class names (e.g. `truncate`, `min-h-0`);
 anything that would collide (`.card`, `.container`, `.grid`, …) uses the
 handoff's version instead.
 
-Course colours (`lib/calendar/colors.ts`) map the four mock courses onto the
-palette's existing semantic tokens (info / accent / success / secondary)
-rather than inventing new colours.
+Course colours (`lib/calendar/colors.ts`) map subjects, in subject-code order,
+onto the palette's existing semantic tokens (info / accent / success /
+secondary, then error and accent-muted) rather than inventing new colours.
 
 ---
 
@@ -87,7 +89,9 @@ no icon library dependency.
   A compact "Courses" popover still allows filtering by individual course.
 - **WeekView** — the primary view: an hour-by-hour time grid (7am–10pm), 7
   day columns, side-by-side lanes for overlapping events, a live "now" line,
-  and assessment due-date flags in the day header.
+  and assessment due-date flags in the day header. Assessments are deadlines,
+  not blocks of time, so they only appear as those flags; the grid holds
+  classes and tasks.
 - **MonthView** — Monday-first month grid, up to 3 events per day + "N more",
   click a day to jump into that week.
 - **KanbanView** — starts with four columns (`Coming Up`, `Not Started`,
@@ -108,8 +112,27 @@ no icon library dependency.
 
 Status changes, reschedules, new tasks, card details and board columns are
 saved to this browser's localStorage (`lib/calendar/storage.ts`, key
-`canoka.calendar.v1`) until Supabase replaces it. The dashboard still reads
-the mock data directly, so it doesn't see those edits.
+`canoka.calendar.v2`) until Supabase replaces it. Only the changes are saved
+and they are laid over the scraped assessments on load, so a new scrape's due
+dates and assessments still come through. v1 saved whole events from the
+mock-data days; on first load only the student's own tasks and board carry
+over. The dashboard reads the scraped data directly, so it doesn't see those
+edits.
+
+### Where the data comes from
+
+`lib/scraper/calendar.ts` turns `scraper/out` into the calendar's courses and
+events, read fresh on every request:
+
+- **Courses** — one per subject in `index.json`, keyed by Canvas course id
+  (the same id notes are saved against).
+- **Assessments** — every published assessment, id `canvas-<assignment id>` so
+  edits survive re-scrapes. Due date from Canvas `due_at`; status `done` once
+  the submission is submitted or graded, otherwise `coming_up`. An assessment
+  Canvas gives no due date (all of 41052's, for instance) has no `start`/`end`:
+  it's on the Kanban board, sorted last, but not the week or month view.
+- **Classes** — none. Canvas has no timetable; that waits on the iCal sync
+  (`/api/calendar/sync`).
 
 ---
 
@@ -124,8 +147,8 @@ even though an earlier UI mockup for this page included them:
 - **Notifications** — assessments overdue or due within 48 hours.
 - **Your subjects** — one chip per course, linking into `/notes`.
 
-All derived live from the same `lib/calendar/mock-data.ts` used by the
-Calendar page, so the two stay consistent with each other.
+All derived live from the same scraped data (`lib/scraper/calendar.ts`) as
+the Calendar page, so the two stay consistent with each other.
 
 ---
 
@@ -134,7 +157,7 @@ Calendar page, so the two stay consistent with each other.
 Roughly the order a backend pass would tackle them:
 
 1. Stand up Supabase — schema, RLS, `lib/supabase/` clients, `.env.example`.
-2. Wire `calendar_events` from Supabase in place of the mock module; persist
+2. Wire `calendar_events` from Supabase in place of the scraper's files; persist
    status changes and reschedules.
 3. Build `lib/canvas/` and implement the `canvas/sync`, `notes/generate`,
    `calendar/sync` API routes (currently all return `501`).

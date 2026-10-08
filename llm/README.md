@@ -5,20 +5,19 @@ an ordered list of subtasks for a given assessment using the Claude API.
 
 ## Setup
 
-\`\`\`bash
-python -m venv .venv
-source .venv/bin/activate  # or .venv\Scripts\Activate.ps1 on Windows
-pip install -r requirements.txt
+`npm install` at the repo root installs `requirements.txt` into the shared
+`.venv` there, so there's no virtualenv to set up here.
 
+```bash
 cp .env.example .env
 # edit .env — add your Anthropic API key
-\`\`\`
+```
 
 ## Run
 
-\`\`\`bash
-python generate_subtasks.py
-\`\`\`
+```bash
+../.venv/bin/python generate_subtasks.py   # ..\.venv\Scripts\python on Windows
+```
 
 Reads a hardcoded subject file and assessment ID for now (see the top of the
 script), and writes the generated subtask JSON to `test_output.json`.

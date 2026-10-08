@@ -10,10 +10,11 @@ is ~100k tokens of JSON; the module view for the week being asked about is ~1k.
 
 ## Setup
 
+`npm install` at the repo root creates `.venv` there and installs
+`requirements.txt` into it. Activate it to use the `python` commands below:
+
 ```bash
-cd SIS
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+source ../.venv/bin/activate   # ..\.venv\Scripts\Activate.ps1 on Windows
 
 cp .env.example .env
 # edit .env — put your Canvas host and a freshly generated token in it

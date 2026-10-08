@@ -57,7 +57,7 @@ export function ScraperSettings({ setup, lastScrape, progress }: Props) {
 
   const blockers = [
     !setup.enabled && "Scraping from the app only works in development (npm run dev).",
-    !setup.python && "There's no Python virtualenv at .venv. Set it up as the README describes.",
+    !setup.python && "There's no Python virtualenv at .venv. Run npm run setup:python to create it.",
     (!setup.canvasUrl || !setup.token) && "Save your Canvas URL and API token above first.",
   ].filter((b): b is string => Boolean(b));
 

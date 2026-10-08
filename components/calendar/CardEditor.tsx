@@ -8,7 +8,7 @@ import type {
   Course,
   KanbanColumn,
 } from "@/types/calendar";
-import { formatEventTime, rescheduleEvent, typeLabel } from "@/lib/calendar/event-utils";
+import { isScheduled, rescheduleEvent, typeLabel, type ScheduledEvent } from "@/lib/calendar/event-utils";
 import { PRIORITY_META, PRIORITY_ORDER, checklistProgress, newId } from "@/lib/calendar/kanban";
 import { courseTone } from "@/lib/calendar/colors";
 import { CloseIcon, PlusIcon } from "@/components/shell/icons";
@@ -37,8 +37,8 @@ const HEADING = "mb-1.5 block text-xs font-semibold uppercase tracking-wide text
 
 // Editor for an assessment or task, shared by the Kanban board's card modal
 // and the week/month side panel so a card reads and edits the same everywhere.
-// Assessments come from Canvas, so their title, subject, due date and time
-// stay read-only; the student can still organise them with a column,
+// Assessments come from Canvas, so their title, subject and due date stay
+// read-only; the student can still organise them with a column,
 // priority, labels, notes, a checklist, and by re-timing their subtasks.
 // Tasks, including AI-generated subtasks, are fully editable.
 //
@@ -146,16 +146,13 @@ export function CardEditor({
         )}
       </div>
 
-      <div>
-        <span className={HEADING}>In your calendar</span>
-        {isTask ? (
+      {/* An assessment sits on its due date, shown above. */}
+      {isTask && isScheduled(event) && (
+        <div>
+          <span className={HEADING}>In your calendar</span>
           <ScheduleFields event={event} onChange={onChange} />
-        ) : (
-          <p className="text-sm text-text">
-            {format(new Date(event.start), "EEE d MMM")}, {formatEventTime(event)}
-          </p>
-        )}
-      </div>
+        </div>
+      )}
 
       {event.location && (
         <div>
@@ -310,7 +307,7 @@ function ScheduleFields({
   event,
   onChange,
 }: {
-  event: CalendarEvent;
+  event: ScheduledEvent;
   onChange: (id: string, patch: Partial<CalendarEvent>) => void;
 }) {
   const commit = (fields: { date?: string; startTime?: string; endTime?: string }) =>
@@ -388,7 +385,7 @@ function Subtasks({
                 {t.title}
               </button>
             </div>
-            <ScheduleFields event={t} onChange={onChange} />
+            {isScheduled(t) && <ScheduleFields event={t} onChange={onChange} />}
           </li>
         ))}
       </ul>
