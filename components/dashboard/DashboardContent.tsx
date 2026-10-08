@@ -2,12 +2,19 @@ import Link from "next/link";
 import { endOfWeek, format, isPast, isWithinInterval, startOfWeek } from "date-fns";
 import type { CalendarEvent, Course } from "@/types/calendar";
 import { WEEK_OPTS, relativeDueLabel } from "@/lib/calendar/event-utils";
+<<<<<<< HEAD
 import { courseTone } from "@/types/calendar";
 import { CURRENT_USER, getGreeting } from "@/lib/user/mock-user";
+=======
+import { courseTone } from "@/lib/calendar/colors";
+import { getGreeting } from "@/lib/user/mock-user";
+>>>>>>> origin/main
 
 interface Props {
   events: CalendarEvent[];
   courses: Course[];
+  /** The student's first name, for the greeting. */
+  userName: string;
 }
 
 // The README scopes the dashboard to exactly three things: notifications,
@@ -15,7 +22,7 @@ interface Props {
 // those — no stats, streaks, or widgets the README doesn't mention.
 const URGENT_WITHIN_HOURS = 48;
 
-export function DashboardContent({ events, courses }: Props) {
+export function DashboardContent({ events, courses, userName }: Props) {
   const now = new Date();
   const courseById = new Map(courses.map((c) => [c.id, c]));
 
@@ -44,7 +51,7 @@ export function DashboardContent({ events, courses }: Props) {
     <div className="space-y-6 p-8 md:p-10">
       <header className="px-2 pt-2">
         <h1 className="text-3xl font-bold tracking-tight text-text md:text-4xl">
-          {getGreeting(now)}, {CURRENT_USER.name}! 👋
+          {getGreeting(now)}, {userName}! 👋
         </h1>
         <p className="mt-2 text-base text-text-muted">Here&apos;s what&apos;s on your plate today.</p>
       </header>

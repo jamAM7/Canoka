@@ -734,6 +734,7 @@ class SubjectBuilder:
                 items.append(record)
             modules.append(
                 {
+                    "id": str(module["id"]) if module.get("id") is not None else None,
                     "name": module.get("name"),
                     "position": module.get("position"),
                     "unlock_at": module.get("unlock_at"),

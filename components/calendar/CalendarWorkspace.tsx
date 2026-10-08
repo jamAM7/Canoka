@@ -65,9 +65,13 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
     if (saved) {
       setEvents(saved.events);
       setBoard(saved.board);
+    } else {
+      // Nothing saved in this browser: show the server's events, including ones that arrive
+      // after the page loaded (router.refresh() once subtasks are generated).
+      setEvents(initialEvents);
     }
     setRestored(true);
-  }, []);
+  }, [initialEvents]);
 
   useEffect(() => {
     if (!restored) return;
