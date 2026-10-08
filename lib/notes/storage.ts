@@ -1,4 +1,6 @@
 import type { NotesReview } from "@/lib/ai/review";
+import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 // Until Supabase is wired up, typed notes and their AI reviews live in this
 // browser's localStorage. Bump a key's version if its saved shape changes.
@@ -28,7 +30,40 @@ export interface SavedReview {
   review: NotesReview;
 }
 
-export function loadNotes(): Note[] | null {
+export async function loadNotes(): Promise<Note[] | null> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient();
+      const { data: auth } = await supabase.auth.getUser();
+      if (auth.user) {
+        const { data, error } = await supabase
+          .from("notes")
+          .select("id, course_id, week, title, content")
+          .eq("user_id", auth.user.id)
+          .order("updated_at", { ascending: false });
+        if (error) throw error;
+        if (data.length > 0) return data.map((note) => ({
+          id: note.id,
+          courseId: note.course_id,
+          week: note.week,
+          title: note.title,
+          content: note.content,
+        }));
+        const legacy = loadNotesLocal();
+        if (legacy?.length) {
+          await saveNotes(legacy);
+          return legacy;
+        }
+        return [];
+      }
+    } catch {
+      // Keep the app usable offline; the next successful save syncs the current copy.
+    }
+  }
+  return loadNotesLocal();
+}
+
+function loadNotesLocal(): Note[] | null {
   try {
     const saved = readList(KEY);
     if (saved) return saved.map((note) => ({ ...note, week: typeof note.week === "number" ? note.week : null }));
@@ -44,7 +79,39 @@ export function loadNotes(): Note[] | null {
 
 export const reviewKey = (courseId: string, week: number) => `${courseId}:${week}`;
 
-export function loadReviews(): Record<string, SavedReview> {
+export async function loadReviews(): Promise<Record<string, SavedReview>> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient();
+      const { data: auth } = await supabase.auth.getUser();
+      if (auth.user) {
+        const { data, error } = await supabase
+          .from("note_reviews")
+          .select("review_key, reviewed_at, note_count, had_course_content, review")
+          .eq("user_id", auth.user.id);
+        if (error) throw error;
+        if (data.length === 0) {
+          const legacy = loadReviewsLocal();
+          if (Object.keys(legacy).length) {
+            await saveReviews(legacy);
+            return legacy;
+          }
+        }
+        return Object.fromEntries(data.map((row) => [row.review_key, {
+          at: row.reviewed_at,
+          notes: row.note_count,
+          hadCourseContent: row.had_course_content,
+          review: row.review as NotesReview,
+        }]));
+      }
+    } catch {
+      // Fall back to the existing browser copy while offline.
+    }
+  }
+  return loadReviewsLocal();
+}
+
+function loadReviewsLocal(): Record<string, SavedReview> {
   try {
     const data = JSON.parse(window.localStorage.getItem(REVIEWS_KEY) ?? "{}");
     return data && typeof data === "object" && !Array.isArray(data) ? data : {};
@@ -53,7 +120,31 @@ export function loadReviews(): Record<string, SavedReview> {
   }
 }
 
-export function saveReviews(reviews: Record<string, SavedReview>): void {
+export async function saveReviews(reviews: Record<string, SavedReview>): Promise<void> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient();
+      const { data: auth } = await supabase.auth.getUser();
+      if (auth.user) {
+        await supabase.from("note_reviews").delete().eq("user_id", auth.user.id);
+        const rows = Object.entries(reviews).map(([key, value]) => ({
+          user_id: auth.user!.id,
+          review_key: key,
+          reviewed_at: value.at,
+          note_count: value.notes,
+          had_course_content: value.hadCourseContent,
+          review: value.review,
+        }));
+        if (rows.length) {
+          const { error } = await supabase.from("note_reviews").insert(rows);
+          if (error) throw error;
+        }
+        return;
+      }
+    } catch {
+      // Preserve a local copy if the network is unavailable.
+    }
+  }
   try {
     window.localStorage.setItem(REVIEWS_KEY, JSON.stringify(reviews));
   } catch {
@@ -61,7 +152,31 @@ export function saveReviews(reviews: Record<string, SavedReview>): void {
   }
 }
 
-export function saveNotes(notes: Note[]): void {
+export async function saveNotes(notes: Note[]): Promise<void> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient();
+      const { data: auth } = await supabase.auth.getUser();
+      if (auth.user) {
+        await supabase.from("notes").delete().eq("user_id", auth.user.id);
+        if (notes.length) {
+          const { error } = await supabase.from("notes").insert(notes.map((note) => ({
+            id: note.id,
+            user_id: auth.user!.id,
+            course_id: note.courseId,
+            week: note.week,
+            title: note.title,
+            content: note.content,
+            updated_at: new Date().toISOString(),
+          })));
+          if (error) throw error;
+        }
+        return;
+      }
+    } catch {
+      // Preserve a local copy if the network is unavailable.
+    }
+  }
   try {
     window.localStorage.setItem(KEY, JSON.stringify(notes));
   } catch {

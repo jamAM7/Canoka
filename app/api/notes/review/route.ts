@@ -1,4 +1,4 @@
-// POST /api/notes/review  { subjectId, week, notes: [{ title, content }] }
+// POST /api/notes/review  { subjectId, week, notes, learningProfile }
 // Reviews the student's notes for one week of a subject with Claude, against
 // that week's Canvas content from the last scrape. Runs scraper/week.py and
 // uses the API key on this machine, so lib/guard limits who can call it.
@@ -41,6 +41,7 @@ export async function POST(request: Request) {
       weekTitle: subject.weeks.find((w) => w.number === input.week)?.title ?? null,
       weekContent,
       notes: input.notes,
+      learningProfile: input.learningProfile,
     });
     return NextResponse.json({ review, hadCourseContent: weekContent !== null });
   } catch (error) {
@@ -67,7 +68,21 @@ function parseInput(body: unknown) {
   if (!notes.some((n) => noteText(n.content).trim())) {
     throw new Error("Write some notes for this week first.");
   }
-  return { subjectId, week, notes };
+  const profile = (raw.learningProfile ?? {}) as Record<string, unknown>;
+  const allowedModes = new Set(["examples", "visual", "explanations", "practice"]);
+  const learningModes = (Array.isArray(profile.learningModes) ? profile.learningModes : [])
+    .filter((value): value is string => typeof value === "string" && allowedModes.has(value))
+    .slice(0, 4);
+  const oneOf = (value: unknown, allowed: string[]) =>
+    typeof value === "string" && allowed.includes(value) ? value : null;
+  const learningProfile = {
+    studyLevel: oneOf(profile.studyLevel, ["high-school", "undergraduate", "postgraduate", "other"]),
+    studyGoal: oneOf(profile.studyGoal, ["understand", "exams", "assignments", "keep-up"]),
+    learningModes,
+    noteDepth: oneOf(profile.noteDepth, ["concise", "balanced", "detailed"]),
+    supportStyle: oneOf(profile.supportStyle, ["guided", "questions", "direct"]),
+  };
+  return { subjectId, week, notes, learningProfile };
 }
 
 function messageOf(error: unknown): string {

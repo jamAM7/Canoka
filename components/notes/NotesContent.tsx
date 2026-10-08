@@ -16,6 +16,7 @@ import {
 import { ChevronIcon, PanelIcon, PlusIcon, SparkleIcon } from "@/components/shell/icons";
 import { NoteEditor } from "./NoteEditor";
 import { WeekReview } from "./WeekReview";
+import { loadLearningProfile } from "@/lib/user/learning-profile";
 
 interface Props {
   subjects: Subject[];
@@ -93,23 +94,25 @@ export function NotesContent({ subjects }: Props) {
 
   // Read saved notes after mount so server and client render the same markup.
   useEffect(() => {
-    const saved = loadNotes() ?? [];
-    const first = inListOrder(saved, subjects)[0];
-    setNotes(saved);
-    setActiveId(first?.id ?? null);
-    // Every subject lists a whole session of weeks, so only the open note's starts expanded.
-    const open = first?.courseId ?? subjects[0]?.id;
-    setClosed(new Set(subjects.map((s) => s.id).filter((id) => id !== open)));
-    setReviews(loadReviews());
-    setLoaded(true);
+    void (async () => {
+      const saved = (await loadNotes()) ?? [];
+      const first = inListOrder(saved, subjects)[0];
+      setNotes(saved);
+      setActiveId(first?.id ?? null);
+      // Every subject lists a whole session of weeks, so only the open note's starts expanded.
+      const open = first?.courseId ?? subjects[0]?.id;
+      setClosed(new Set(subjects.map((s) => s.id).filter((id) => id !== open)));
+      setReviews(await loadReviews());
+      setLoaded(true);
+    })();
   }, [subjects]);
 
   useEffect(() => {
-    if (loaded) saveNotes(notes);
+    if (loaded) void saveNotes(notes);
   }, [notes, loaded]);
 
   useEffect(() => {
-    if (loaded) saveReviews(reviews);
+    if (loaded) void saveReviews(reviews);
   }, [reviews, loaded]);
 
   const toggle = (key: string) => {
@@ -145,10 +148,16 @@ export function NotesContent({ subjects }: Props) {
     setActiveId((list[i + 1] ?? list[i - 1])?.id ?? null);
   };
 
-  const reviewWeek = async (subjectId: string, week: number) => {
-    const key = reviewKey(subjectId, week);
-    const weekNotes = notes.filter((n) => n.courseId === subjectId && n.week === week);
-    setReviewing(key);
+    const reviewWeek = async (subjectId: string, week: number) => {
+      const key = reviewKey(subjectId, week);
+      const weekNotes = notes.filter((n) => n.courseId === subjectId && n.week === week);
+      let learningProfile: unknown = null;
+      try {
+        learningProfile = await loadLearningProfile();
+      } catch {
+        // Profile lookup should never stop a student reviewing their notes.
+      }
+      setReviewing(key);
     setReviewError(null);
     try {
       const res = await fetch("/api/notes/review", {
@@ -156,8 +165,9 @@ export function NotesContent({ subjects }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subjectId,
-          week,
-          notes: weekNotes.map(({ title, content }) => ({ title, content })),
+            week,
+            notes: weekNotes.map(({ title, content }) => ({ title, content })),
+            learningProfile,
         }),
       });
       const data = await res.json();

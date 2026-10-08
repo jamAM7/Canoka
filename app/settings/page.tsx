@@ -2,6 +2,7 @@
 // TODO: calendar subscriptions and notification preferences.
 import { Sidebar } from "@/components/shell/Sidebar";
 import { AiSettings } from "@/components/settings/AiSettings";
+import { AccountSettings } from "@/components/settings/AccountSettings";
 import { ScraperSettings } from "@/components/settings/ScraperSettings";
 import { anthropicKey } from "@/lib/ai/key";
 import { scrapeProgress, scraperSetup } from "@/lib/scraper/runner";
@@ -25,6 +26,7 @@ export default async function SettingsPage() {
 
           <ScraperSettings setup={scraperSetup()} lastScrape={await lastScrape()} progress={scrapeProgress()} />
           <AiSettings hasKey={anthropicKey() !== null} />
+          <AccountSettings />
         </div>
       </main>
     </div>

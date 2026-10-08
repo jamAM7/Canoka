@@ -29,6 +29,13 @@ export interface ReviewRequest {
   /** The week's Canvas content as markdown, or null if nothing in the last scrape names the week. */
   weekContent: string | null;
   notes: { title: string; content: string }[];
+  learningProfile?: {
+    studyLevel: string | null;
+    studyGoal: string | null;
+    learningModes: string[];
+    noteDepth: string | null;
+    supportStyle: string | null;
+  } | null;
 }
 
 /** A failure with a message fit to show the student. */
@@ -41,6 +48,40 @@ const SYSTEM = `You review a university student's study notes for one week of a 
 Compare the notes with that week's course content from Canvas. Tell the student what they've captured well, what important material is missing, and anything in the notes that is wrong. Judge coverage only against the course content you're given. When there is none, say coverage can't be checked, and review the notes on their own: clarity, accuracy, and gaps a student of the subject would want filled.
 
 Be specific: name the actual concepts, never just "add more detail". Write to the student as "you", plainly and briefly.`;
+
+const PROFILE_LABELS: Record<string, string> = {
+  "high-school": "high school",
+  undergraduate: "undergraduate",
+  postgraduate: "postgraduate",
+  other: "another study level",
+  understand: "deep understanding",
+  exams: "exam preparation",
+  assignments: "completing assignments",
+  "keep-up": "keeping up each week",
+  examples: "worked examples",
+  visual: "visual structure and relationships",
+  explanations: "plain, first-principles explanations",
+  practice: "active recall and practice questions",
+  concise: "concise, quick-scan explanations",
+  balanced: "balanced explanations",
+  detailed: "detailed explanations with context and connections",
+  guided: "step-by-step guidance",
+  questions: "questions and prompts before direct answers",
+  direct: "clear, direct explanations",
+};
+
+function profilePrompt(profile: ReviewRequest["learningProfile"]): string {
+  if (!profile) return "No learning preferences were provided.";
+  const modes = profile.learningModes.map((mode) => PROFILE_LABELS[mode] ?? mode).join(", ") || "not specified";
+  return [
+    `Study level: ${PROFILE_LABELS[profile.studyLevel ?? ""] ?? "not specified"}`,
+    `Main goal: ${PROFILE_LABELS[profile.studyGoal ?? ""] ?? "not specified"}`,
+    `Learns best through: ${modes}`,
+    `Preferred depth: ${PROFILE_LABELS[profile.noteDepth ?? ""] ?? "not specified"}`,
+    `Preferred support: ${PROFILE_LABELS[profile.supportStyle ?? ""] ?? "not specified"}`,
+    "Adapt the summary, corrections, next steps, and checking questions to these preferences without mentioning this profile explicitly.",
+  ].join("\n");
+}
 
 export async function reviewNotes(request: ReviewRequest): Promise<NotesReview> {
   const key = anthropicKey();
@@ -76,7 +117,7 @@ export async function reviewNotes(request: ReviewRequest): Promise<NotesReview> 
             },
             {
               type: "text",
-              text: `Subject: ${request.subject}\n${week}\n\nThe student's notes for this week, as HTML from their editor:\n\n<notes>\n${notes}\n</notes>`,
+              text: `Subject: ${request.subject}\n${week}\n\n<learning_preferences>\n${profilePrompt(request.learningProfile)}\n</learning_preferences>\n\nThe student's notes for this week, as HTML from their editor:\n\n<notes>\n${notes}\n</notes>`,
             },
           ],
         },

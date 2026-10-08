@@ -61,12 +61,14 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
   const skipNextSave = useRef(true);
 
   useEffect(() => {
-    const saved = loadCalendar(initialEvents);
-    if (saved) {
-      setEvents(saved.events);
-      setBoard(saved.board);
-    }
-    setRestored(true);
+    void (async () => {
+      const saved = await loadCalendar(initialEvents);
+      if (saved) {
+        setEvents(saved.events);
+        setBoard(saved.board);
+      }
+      setRestored(true);
+    })();
   }, []);
 
   useEffect(() => {
@@ -75,7 +77,7 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
       skipNextSave.current = false;
       return;
     }
-    saveCalendar(initialEvents, { events, board });
+    void saveCalendar(initialEvents, { events, board });
   }, [restored, initialEvents, events, board]);
 
   const [hiddenCourses, setHiddenCourses] = useState<Set<string>>(new Set());

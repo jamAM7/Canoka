@@ -1,5 +1,7 @@
 import type { CalendarEvent, KanbanBoard } from "@/types/calendar";
 import { STATUS_ORDER } from "./event-utils";
+import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 // Until Supabase is wired up, the calendar keeps the student's edits (new
 // tasks, card details, moves, board columns) in this browser's localStorage.
@@ -28,7 +30,31 @@ interface SavedChanges {
 }
 
 /** `base` is the event list the page was rendered with. */
-export function loadCalendar(base: CalendarEvent[]): CalendarState | null {
+export async function loadCalendar(base: CalendarEvent[]): Promise<CalendarState | null> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient();
+      const { data: auth } = await supabase.auth.getUser();
+      if (auth.user) {
+        const { data, error } = await supabase
+          .from("calendar_state")
+          .select("changes")
+          .eq("user_id", auth.user.id)
+          .maybeSingle();
+        if (error) throw error;
+        if (isChanges(data?.changes)) return applyChanges(base, data.changes);
+        const legacy = loadCalendarLocal(base);
+        if (legacy) await saveCalendar(base, legacy);
+        return legacy;
+      }
+    } catch {
+      // Fall back to this browser's copy while offline.
+    }
+  }
+  return loadCalendarLocal(base);
+}
+
+function loadCalendarLocal(base: CalendarEvent[]): CalendarState | null {
   try {
     const changes = readChanges();
     return changes && applyChanges(base, changes);
@@ -37,9 +63,27 @@ export function loadCalendar(base: CalendarEvent[]): CalendarState | null {
   }
 }
 
-export function saveCalendar(base: CalendarEvent[], state: CalendarState): void {
+export async function saveCalendar(base: CalendarEvent[], state: CalendarState): Promise<void> {
+  const changes = diff(base, state);
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient();
+      const { data: auth } = await supabase.auth.getUser();
+      if (auth.user) {
+        const { error } = await supabase.from("calendar_state").upsert({
+          user_id: auth.user.id,
+          changes,
+          updated_at: new Date().toISOString(),
+        });
+        if (error) throw error;
+        return;
+      }
+    } catch {
+      // Preserve a local copy if the network is unavailable.
+    }
+  }
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(diff(base, state)));
+    window.localStorage.setItem(KEY, JSON.stringify(changes));
   } catch {
     // Storage blocked or full: keep working in memory for this session.
   }
