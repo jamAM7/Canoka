@@ -70,11 +70,11 @@ const config: Config = {
         navbar: "72px",
       },
       fontFamily: {
-        // Fonts injected by next/font: DM Sans for body text, Space Grotesk
+        // Fonts injected by next/font: Poppins for body text, Sintony
         // for headings (h1–h6 pick it up from styles.css).
-        sans: ["var(--font-dm-sans)", "DM Sans", "sans-serif"],
-        body: ["var(--font-dm-sans)", "DM Sans", "sans-serif"],
-        heading: ["var(--font-space-grotesk)", "Space Grotesk", "sans-serif"],
+        sans: ["var(--font-poppins)", "Poppins", "sans-serif"],
+        body: ["var(--font-poppins)", "Poppins", "sans-serif"],
+        heading: ["var(--font-sintony)", "Sintony", "sans-serif"],
       },
       fontSize: {
         // Font-size scale (value + line-height). Use `text-sm`, `text-lg` etc.

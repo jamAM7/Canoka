@@ -15,6 +15,10 @@ interface Props {
 // those — no stats, streaks, or widgets the README doesn't mention.
 const URGENT_WITHIN_HOURS = 48;
 
+// Sections sit on a fill one shade off the page background: no border or
+// shadow, so they read as soft areas rather than boxed cards.
+const PANEL = "rounded-xl bg-surface-muted/70 p-6";
+
 export function DashboardContent({ events, courses }: Props) {
   const now = new Date();
   const courseById = new Map(courses.map((c) => [c.id, c]));
@@ -42,7 +46,7 @@ export function DashboardContent({ events, courses }: Props) {
 
   return (
     <div className="space-y-6 p-8 md:p-10">
-      <header className="px-2 pt-2">
+      <header className="px-2 pt-2 text-center">
         <h1 className="text-3xl font-bold tracking-tight text-text md:text-4xl">
           {getGreeting(now)}!
         </h1>
@@ -51,7 +55,7 @@ export function DashboardContent({ events, courses }: Props) {
 
       <div className="space-y-6">
         <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-          <section className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+          <section className={PANEL}>
             <div className="mb-4 flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold text-text">Due this week</h2>
@@ -103,7 +107,7 @@ export function DashboardContent({ events, courses }: Props) {
             )}
           </section>
 
-          <section className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+          <section className={PANEL}>
             <div className="mb-4">
               <h2 className="text-xl font-semibold text-text">Notifications</h2>
               <p className="mt-1 text-sm text-text-muted">Overdue or due within 48 hours.</p>
@@ -147,7 +151,7 @@ export function DashboardContent({ events, courses }: Props) {
           </section>
         </div>
 
-        <section className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+        <section className={PANEL}>
           <div className="mb-4">
             <h2 className="text-xl font-semibold text-text">Your subjects</h2>
             <p className="mt-1 text-sm text-text-muted">Quick links into each subject&apos;s notes.</p>

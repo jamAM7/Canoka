@@ -4,18 +4,19 @@ import "@/styles/styles.css";
 import "@/styles/calendar-extra.css";
 import "@/styles/dashboard-extra.css";
 import type { Metadata } from "next";
-import { DM_Sans, Space_Grotesk } from "next/font/google";
+import { Poppins, Sintony } from "next/font/google";
 
-const dmSans = DM_Sans({
+const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-dm-sans",
+  variable: "--font-poppins",
 });
 
-const spaceGrotesk = Space_Grotesk({
+// Sintony only ships in regular and bold.
+const sintony = Sintony({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-space-grotesk",
+  weight: ["400", "700"],
+  variable: "--font-sintony",
 });
 
 export const metadata: Metadata = {
@@ -29,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${dmSans.variable} ${spaceGrotesk.variable}`}>
+    <html lang="en" className={`${poppins.variable} ${sintony.variable}`}>
       <body>{children}</body>
     </html>
   );

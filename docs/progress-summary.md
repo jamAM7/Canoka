@@ -48,9 +48,8 @@ as three layered stylesheets under `styles/`, imported once in
   in Week view, the nested sidebar sub-nav, dashboard notification rows).
   These only ever reference `variables.css` tokens — no new hex values.
 
-Body typeface is **DM Sans** and headings use **Space Grotesk**, both loaded
-via `next/font/google` and exposed as `--font-dm-sans` and
-`--font-space-grotesk`, which `variables.css`'s `--font-body` and
+Body typeface is **Poppins** and headings use **Sintony**, both loaded via
+`next/font/google` and exposed as `--font-poppins` and `--font-sintony`, which `variables.css`'s `--font-body` and
 `--font-heading` point at. Tailwind is still installed and used for one-off layout utilities that
 don't collide with the handoff's class names (e.g. `truncate`, `min-h-0`);
 anything that would collide (`.card`, `.container`, `.grid`, …) uses the
