@@ -127,7 +127,7 @@ export function DashboardContent({ events, courses, userName }: Props) {
                     >
                       <span
                         className={`grid h-8 w-8 place-items-center rounded-full text-xs font-semibold ${
-                          overdue ? "bg-red-100 text-error" : "text-text"
+                          overdue ? "bg-error/15 text-error" : "text-text"
                         }`}
                         style={overdue ? undefined : { background: tone.bg, color: tone.fg }}
                       >

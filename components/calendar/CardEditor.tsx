@@ -204,7 +204,7 @@ export function CardEditor({
           <div className="flex gap-2">
             <button
               onClick={() => onDelete(event.id)}
-              className="rounded-md bg-error px-3 py-1.5 text-sm font-medium text-white hover:bg-error/90"
+              className="rounded-md bg-error px-3 py-1.5 text-sm font-medium text-on-primary hover:bg-error/90"
             >
               Delete
             </button>

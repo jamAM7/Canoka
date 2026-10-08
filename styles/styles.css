@@ -15,7 +15,8 @@
 }
 
 html {
-    font-size: 16px;
+    /* 100% keeps the browser's own text size setting; Settings › Appearance scales it. */
+    font-size: calc(100% * var(--text-scale, 1));
     scroll-behavior: smooth;
 }
 
@@ -300,7 +301,7 @@ h6 {
 
 .nav-link.active {
     background: var(--color-primary);
-    color: var(--color-white);
+    color: var(--color-on-primary);
 }
 
 .sidebar-bottom {
@@ -380,7 +381,7 @@ h6 {
 
 .btn-primary {
     background: var(--color-primary);
-    color: var(--color-white);
+    color: var(--color-on-primary);
 }
 
 .btn-primary:hover {
@@ -404,12 +405,12 @@ h6 {
 
 .btn-outline:hover {
     background: var(--color-primary);
-    color: var(--color-white);
+    color: var(--color-on-primary);
 }
 
 .btn-danger {
     background: var(--color-error);
-    color: var(--color-white);
+    color: var(--color-on-primary);
 }
 
 .btn-ghost {
@@ -523,7 +524,7 @@ h6 {
 .input:hover,
 .select:hover,
 .textarea:hover {
-    border-color: var(--color-border-dark, #AFAFAF);
+    border-color: var(--color-border-dark);
 }
 
 .input:focus,
@@ -561,22 +562,22 @@ h6 {
 }
 
 .badge-primary {
-    background: rgba(142, 202, 230, 0.35);
+    background: rgb(var(--rgb-primary-light) / 0.35);
     color: var(--color-primary);
 }
 
 .badge-success {
-    background: #E4F0E5;
+    background: var(--color-success-soft);
     color: var(--color-success);
 }
 
 .badge-warning {
-    background: #FFF0C7;
-    color: #805A00;
+    background: var(--color-warning-soft);
+    color: var(--color-warning-text);
 }
 
 .badge-error {
-    background: #F8E1E1;
+    background: var(--color-error-soft);
     color: var(--color-error);
 }
 
@@ -597,26 +598,26 @@ h6 {
 }
 
 .alert-success {
-    background: #E4F0E5;
-    border-color: #C9DEC9;
+    background: var(--color-success-soft);
+    border-color: var(--color-success-border);
     color: var(--color-success);
 }
 
 .alert-warning {
-    background: #FFF0C7;
-    border-color: #FFE19A;
-    color: #805A00;
+    background: var(--color-warning-soft);
+    border-color: var(--color-warning-border);
+    color: var(--color-warning-text);
 }
 
 .alert-error {
-    background: #F8E1E1;
-    border-color: #EDC1C1;
+    background: var(--color-error-soft);
+    border-color: var(--color-error-border);
     color: var(--color-error);
 }
 
 .alert-info {
-    background: #E6F4FA;
-    border-color: #C7E8F4;
+    background: var(--color-info-soft);
+    border-color: var(--color-info-border);
     color: var(--color-primary);
 }
 
@@ -716,7 +717,7 @@ h6 {
 
 .calendar-date.today {
     background: var(--color-primary);
-    color: var(--color-white);
+    color: var(--color-on-primary);
 }
 
 .calendar-event {
@@ -727,7 +728,7 @@ h6 {
 
     border-radius: var(--radius-sm);
 
-    background: rgba(142, 202, 230, 0.35);
+    background: rgb(var(--rgb-primary-light) / 0.35);
     color: var(--color-primary);
 
     font-size: var(--font-size-xs);
@@ -739,12 +740,12 @@ h6 {
 }
 
 .calendar-event.important {
-    background: rgba(255, 183, 3, 0.25);
-    color: #6D4E00;
+    background: rgb(var(--rgb-warning) / 0.25);
+    color: var(--color-warning-text);
 }
 
 .calendar-event.completed {
-    background: #E4F0E5;
+    background: var(--color-success-soft);
     color: var(--color-success);
 }
 
@@ -929,7 +930,7 @@ h6 {
 }
 
 .note-item.active {
-    background: rgba(142, 202, 230, 0.18);
+    background: rgb(var(--rgb-primary-light) / 0.18);
 }
 
 .note-item-title {
@@ -982,8 +983,8 @@ h6 {
     margin-bottom: var(--space-5);
     padding: var(--space-4);
 
-    background: rgba(142, 202, 230, 0.12);
-    border: var(--border-width) solid rgba(142, 202, 230, 0.5);
+    background: rgb(var(--rgb-primary-light) / 0.12);
+    border: var(--border-width) solid rgb(var(--rgb-primary-light) / 0.5);
     border-radius: var(--radius-md);
 }
 
@@ -1156,7 +1157,7 @@ h6 {
     content: "";
     position: absolute;
     inset: 0;
-    background: rgba(142, 202, 230, 0.25);
+    background: rgb(var(--rgb-primary-light) / 0.25);
     pointer-events: none;
 }
 
@@ -1242,17 +1243,17 @@ h6 {
 }
 
 .quiz-option.selected {
-    background: rgba(142, 202, 230, 0.18);
+    background: rgb(var(--rgb-primary-light) / 0.18);
     border-color: var(--color-primary);
 }
 
 .quiz-option.correct {
-    background: #E4F0E5;
+    background: var(--color-success-soft);
     border-color: var(--color-success);
 }
 
 .quiz-option.incorrect {
-    background: #F8E1E1;
+    background: var(--color-error-soft);
     border-color: var(--color-error);
 }
 

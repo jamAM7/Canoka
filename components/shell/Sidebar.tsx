@@ -81,7 +81,7 @@ export function Sidebar({ active, calendarView, onCalendarViewChange }: Props) {
       {/* Collapsed, the toggle drops below the logo: the strip is too narrow for both. */}
       <div className={`mb-10 flex items-center ${collapsed ? "flex-col gap-2" : "justify-between"}`}>
         <Link href="/dashboard" className="flex items-center gap-3 text-decoration-none">
-          <span className="grid h-[34px] w-[34px] place-items-center rounded-full bg-primary text-xs font-bold text-white">
+          <span className="grid h-[34px] w-[34px] place-items-center rounded-full bg-primary text-xs font-bold text-on-primary">
             CA
           </span>
           <span className={`text-lg font-bold text-primary ${label ?? ""}`}>Canoka</span>

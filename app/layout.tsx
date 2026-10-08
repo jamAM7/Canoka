@@ -5,6 +5,7 @@ import "@/styles/calendar-extra.css";
 import "@/styles/dashboard-extra.css";
 import type { Metadata } from "next";
 import { Karla } from "next/font/google";
+import { PREFERENCES_SCRIPT } from "@/lib/ui/preferences";
 
 const karla = Karla({
   subsets: ["latin"],
@@ -23,7 +24,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={karla.variable}>
+    // The preferences script sets data-* attributes on <html> before React
+    // hydrates, so the server's <html> differs from the browser's on purpose.
+    <html lang="en" className={karla.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: PREFERENCES_SCRIPT }} />
+      </head>
       <body>{children}</body>
     </html>
   );

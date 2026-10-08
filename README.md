@@ -112,6 +112,7 @@ installs on Windows, macOS and Linux.
 | `CANVAS_BASE_URL` | Your institution's Canvas URL, e.g. `https://canvas.uts.edu.au` |
 | `CANVAS_API_TOKEN` | Canvas → Account → Settings → New Access Token |
 | `AI_API_KEY` | Your AI provider's API key |
+| `TIMETABLE_ICAL_URL` | Optional. UTS My Timetable's iCal subscription link, for classes on the calendar. Easiest set from Settings → Timetable |
 
 ## Canvas scraper
 
