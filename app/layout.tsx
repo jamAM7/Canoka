@@ -4,12 +4,18 @@ import "@/styles/styles.css";
 import "@/styles/calendar-extra.css";
 import "@/styles/dashboard-extra.css";
 import type { Metadata } from "next";
-import { Karla } from "next/font/google";
+import { DM_Sans, Space_Grotesk } from "next/font/google";
 
-const karla = Karla({
+const dmSans = DM_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-karla",
+  variable: "--font-dm-sans",
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-space-grotesk",
 });
 
 export const metadata: Metadata = {
@@ -23,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={karla.variable}>
+    <html lang="en" className={`${dmSans.variable} ${spaceGrotesk.variable}`}>
       <body>{children}</body>
     </html>
   );

@@ -1,6 +1,6 @@
 // Settings: Canvas connection, calendar subscriptions, notification prefs.
 // TODO: calendar subscriptions and notification preferences.
-import { Sidebar } from "@/components/shell/Sidebar";
+import { NavBar } from "@/components/shell/NavBar";
 import { AiSettings } from "@/components/settings/AiSettings";
 import { ScraperSettings } from "@/components/settings/ScraperSettings";
 import { anthropicKey } from "@/lib/ai/key";
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   return (
     <div className="app-shell">
-      <Sidebar active="settings" />
+      <NavBar active="settings" />
       <main className="main">
         <div className="space-y-6 p-8 md:p-10">
           <header className="px-2 pt-2">

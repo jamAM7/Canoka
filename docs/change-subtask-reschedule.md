@@ -21,9 +21,9 @@
 
 | Type | Editable? | Why |
 |---|---|---|
-| `task` / subtask | ✅ Yes | Student-owned scheduling |
-| `class` | ❌ No | Timetabled session |
-| `assessment` due date | ❌ No | Comes from Canvas |
+| `task` / subtask | Yes | Student-owned scheduling |
+| `class` | No | Timetabled session |
+| `assessment` due date | No | Comes from Canvas |
 
 (Guarded by `canEditSchedule(ev)` → `ev.type === "task"` in `EventDetail.tsx`; loosen this if assessments should become editable too.)
 

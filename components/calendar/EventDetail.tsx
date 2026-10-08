@@ -6,6 +6,7 @@ import type { CalendarEvent, Course } from "@/types/calendar";
 import { formatEventTime, isScheduled, typeLabel, type ScheduledEvent } from "@/lib/calendar/event-utils";
 import { isBoardCard } from "@/lib/calendar/kanban";
 import { courseTone } from "@/lib/calendar/colors";
+import { CloseIcon } from "@/components/shell/icons";
 import { CardEditor, type CardEditorProps } from "./CardEditor";
 
 type Props = Omit<CardEditorProps, "event" | "layout"> & {
@@ -76,7 +77,7 @@ function ClassDetail({
           </h2>
         </div>
         <button onClick={onClose} aria-label="Close" className="icon-btn">
-          ✕
+          <CloseIcon />
         </button>
       </div>
 

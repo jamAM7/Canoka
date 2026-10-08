@@ -3,7 +3,7 @@ import { endOfWeek, format, isPast, isWithinInterval, startOfWeek } from "date-f
 import type { CalendarEvent, Course } from "@/types/calendar";
 import { WEEK_OPTS, relativeDueLabel } from "@/lib/calendar/event-utils";
 import { courseTone } from "@/lib/calendar/colors";
-import { CURRENT_USER, getGreeting } from "@/lib/user/mock-user";
+import { ClockIcon } from "@/components/shell/icons";
 
 interface Props {
   events: CalendarEvent[];
@@ -44,7 +44,7 @@ export function DashboardContent({ events, courses }: Props) {
     <div className="space-y-6 p-8 md:p-10">
       <header className="px-2 pt-2">
         <h1 className="text-3xl font-bold tracking-tight text-text md:text-4xl">
-          {getGreeting(now)}, {CURRENT_USER.name}! 👋
+          {getGreeting(now)}!
         </h1>
         <p className="mt-2 text-base text-text-muted">Here&apos;s what&apos;s on your plate today.</p>
       </header>
@@ -129,7 +129,7 @@ export function DashboardContent({ events, courses }: Props) {
                         }`}
                         style={overdue ? undefined : { background: tone.bg, color: tone.fg }}
                       >
-                        {overdue ? "!" : "⏱️"}
+                        {overdue ? "!" : <ClockIcon className="h-4 w-4" />}
                       </span>
 
                       <div className="min-w-0 flex-1">
@@ -182,4 +182,12 @@ export function DashboardContent({ events, courses }: Props) {
       </div>
     </div>
   );
+}
+
+/** Time-of-day greeting, e.g. "Good morning". */
+function getGreeting(now: Date): string {
+  const hour = now.getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
 }

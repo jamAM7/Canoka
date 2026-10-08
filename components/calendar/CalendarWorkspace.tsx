@@ -30,7 +30,7 @@ import {
   setColumnStatus,
 } from "@/lib/calendar/kanban";
 import { loadCalendar, saveCalendar } from "@/lib/calendar/storage";
-import { Sidebar } from "@/components/shell/Sidebar";
+import { NavBar } from "@/components/shell/NavBar";
 import { CalendarToolbar } from "./CalendarToolbar";
 import { WeekView } from "./WeekView";
 import { MonthView } from "./MonthView";
@@ -208,8 +208,8 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
   }, [view, anchor]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar active="calendar" calendarView={view} onCalendarViewChange={setView} />
+    <div className="flex h-screen flex-col overflow-hidden bg-background">
+      <NavBar active="calendar" />
 
       {/* min-w-0 on Kanban keeps a board wider than the screen scrolling inside
           itself instead of stretching the page past the viewport. */}
@@ -219,6 +219,8 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
           onPrev={() => shift(-1)}
           onNext={() => shift(1)}
           onToday={() => setAnchor(new Date())}
+          view={view}
+          onViewChange={setView}
           showNav={view !== "kanban"}
           courses={courses}
           hiddenCourses={hiddenCourses}

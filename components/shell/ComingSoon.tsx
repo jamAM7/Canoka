@@ -1,10 +1,10 @@
-// Page shell for sidebar sections that aren't built yet, so navigation never
+// Page shell for nav sections that aren't built yet, so navigation never
 // lands on a blank page. Replace a page's use of this once the real view exists.
 import type { ComponentProps } from "react";
-import { Sidebar } from "@/components/shell/Sidebar";
+import { NavBar } from "@/components/shell/NavBar";
 
 interface Props {
-  active: ComponentProps<typeof Sidebar>["active"];
+  active: ComponentProps<typeof NavBar>["active"];
   title: string;
   description: string;
 }
@@ -12,7 +12,7 @@ interface Props {
 export function ComingSoon({ active, title, description }: Props) {
   return (
     <div className="app-shell">
-      <Sidebar active={active} />
+      <NavBar active={active} />
       <main className="main">
         <div className="space-y-6 p-8 md:p-10">
           <header className="px-2 pt-2">

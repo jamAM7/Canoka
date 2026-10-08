@@ -1,7 +1,7 @@
 // Home dashboard — scoped to exactly what the README assigns it:
 // notifications, "due this week", and quick links into notes.
 import { loadCalendarData } from "@/lib/scraper/calendar";
-import { Sidebar } from "@/components/shell/Sidebar";
+import { NavBar } from "@/components/shell/NavBar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 
 export const metadata = { title: "Dashboard · Canoka" };
@@ -14,7 +14,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="app-shell">
-      <Sidebar active="dashboard" />
+      <NavBar active="dashboard" />
       <main className="main">
         <DashboardContent events={events} courses={courses} />
       </main>

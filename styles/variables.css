@@ -45,12 +45,12 @@
 
     /* ---------------------------------------------------------
        TYPOGRAPHY
-       Karla is the preferred font.
+       DM Sans for body text, Space Grotesk for headings.
        Fallbacks keep the design usable if it cannot load.
        --------------------------------------------------------- */
 
-    --font-body: var(--font-karla), "Karla", Arial, Helvetica, sans-serif;
-    --font-heading: var(--font-karla), "Karla", Arial, Helvetica, sans-serif;
+    --font-body: var(--font-dm-sans), "DM Sans", Arial, Helvetica, sans-serif;
+    --font-heading: var(--font-space-grotesk), "Space Grotesk", Arial, Helvetica, sans-serif;
 
     --font-size-xs: 0.75rem;       /* 12px */
     --font-size-sm: 0.875rem;      /* 14px */
@@ -113,7 +113,7 @@
     --content-max-width: 1440px;
     --content-reading-width: 760px;
 
-    --sidebar-width: 240px;
+    --sidebar-width: 200px;
     --navbar-height: 72px;
 
     --page-padding: var(--space-8);

@@ -1,6 +1,6 @@
 // Notes overview: the subjects the Canvas scraper found -> their notes.
 // TODO: per-week notes, and load/save notes via `subjects` + `notes` in Supabase.
-import { Sidebar } from "@/components/shell/Sidebar";
+import { NavBar } from "@/components/shell/NavBar";
 import { NotesContent } from "@/components/notes/NotesContent";
 import { loadSubjects } from "@/lib/scraper/subjects";
 
@@ -14,7 +14,7 @@ export default async function NotesPage() {
 
   return (
     <div className="app-shell">
-      <Sidebar active="notes" />
+      <NavBar active="notes" />
       <main className="main">
         <NotesContent subjects={subjects} />
       </main>

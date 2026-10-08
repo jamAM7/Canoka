@@ -66,15 +66,15 @@ const config: Config = {
         12: "3rem",
         16: "4rem",
         20: "5rem",
-        sidebar: "240px",
+        sidebar: "200px",
         navbar: "72px",
       },
       fontFamily: {
-        // We use the Karla variable injected by next/font. Keep only
-        // Karla + a generic fallback to avoid unexpected font swaps.
-        sans: ["var(--font-karla)", "Karla", "sans-serif"],
-        body: ["var(--font-karla)", "Karla", "sans-serif"],
-        heading: ["var(--font-karla)", "Karla", "sans-serif"],
+        // Fonts injected by next/font: DM Sans for body text, Space Grotesk
+        // for headings (h1–h6 pick it up from styles.css).
+        sans: ["var(--font-dm-sans)", "DM Sans", "sans-serif"],
+        body: ["var(--font-dm-sans)", "DM Sans", "sans-serif"],
+        heading: ["var(--font-space-grotesk)", "Space Grotesk", "sans-serif"],
       },
       fontSize: {
         // Font-size scale (value + line-height). Use `text-sm`, `text-lg` etc.
