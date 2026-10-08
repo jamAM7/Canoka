@@ -212,7 +212,7 @@ export function ScraperSettings({ setup, lastScrape, progress }: Props) {
   };
 
   return (
-    <section className="rounded-xl border border-border bg-surface shadow-sm">
+    <section id="canvas" className="rounded-xl border border-border bg-surface shadow-sm">
       <div className="space-y-5 p-5">
         <h2 className="text-xl font-semibold text-text">Canvas scraper</h2>
 
@@ -247,7 +247,10 @@ export function ScraperSettings({ setup, lastScrape, progress }: Props) {
             />
             <span className="mt-1 block text-xs text-text-muted">
               Make one in Canvas under Account › Settings › New access token. It&apos;s saved in
-              scraper/.env on this computer.
+              scraper/.env on this computer.{" "}
+              <Link href="/settings/canvas-token" className="font-medium text-primary hover:underline">
+                How to get one
+              </Link>
             </span>
           </label>
           <div className="flex flex-wrap items-center gap-3">
