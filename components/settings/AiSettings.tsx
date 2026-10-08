@@ -11,7 +11,7 @@ interface Props {
 const FIELD =
   "w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary-light focus:shadow-focus focus:outline-none";
 const PRIMARY_BUTTON =
-  "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50";
+  "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50";
 
 // Settings › AI: the Anthropic API key that AI review of notes runs on.
 export function AiSettings({ hasKey }: Props) {

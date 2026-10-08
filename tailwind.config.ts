@@ -1,5 +1,8 @@
 import type { Config } from "tailwindcss";
 
+/** A colour from styles/variables.css's --rgb-* triplets, with Tailwind's opacity. */
+const token = (name: string) => `rgb(var(--rgb-${name}) / <alpha-value>)`;
+
 const config: Config = {
   // Files Tailwind will scan for class names. Keep this list up-to-date
   // when adding new folders or file types so unused styles are purged.
@@ -15,42 +18,46 @@ const config: Config = {
     extend: {
       // Color palette (semantic + brand). Prefer semantic names in
       // components (primary, surface, border) so tokens can swap easily.
+      // Values live in styles/variables.css, which switches them for dark
+      // mode and high contrast; `token()` keeps opacity modifiers working.
       colors: {
-        primary: "#023047",
-        "primary-light": "#8ECAE6",
-        "primary-dark": "#012536",
-        secondary: "#FFB703",
-        "secondary-dark": "#FB8500",
-        accent: "#E26D5C",
-        "accent-muted": "#C9CBA3",
-        success: "#5F8A62",
-        warning: "#FFB703",
-        error: "#C94C4C",
-        info: "#8ECAE6",
-        text: "#0C0C20",
-        "text-muted": "#62626D",
-        "text-light": "#8A8A92",
-        background: "#F6FAF9",
-        surface: "#FFFFFF",
-        "surface-muted": "#EEF3F3",
-        border: "#D9DFDF",
-        "border-light": "#E8ECEC",
+        primary: token("primary"),
+        "primary-light": token("primary-light"),
+        "primary-dark": token("primary-dark"),
+        // Text and icons on bg-primary or bg-error.
+        "on-primary": token("on-primary"),
+        secondary: token("secondary"),
+        "secondary-dark": token("secondary-dark"),
+        accent: token("accent"),
+        "accent-muted": token("accent-muted"),
+        success: token("success"),
+        warning: token("warning"),
+        error: token("error"),
+        info: token("info"),
+        text: token("text"),
+        "text-muted": token("text-muted"),
+        "text-light": token("text-light"),
+        background: token("background"),
+        surface: token("surface"),
+        "surface-muted": token("surface-muted"),
+        border: token("border"),
+        "border-light": token("border-light"),
         // Calendar grid lines (week hours/days, month cells): darker than
         // `border` so the grid stays readable on the `background` colour.
-        "border-strong": "#CBD3D3",
-        white: "#FFFFFF",
-        black: "#0C0C20",
-        brand: "#023047",
-        brandSoft: "#8ECAE6",
-        brandDeep: "#012536",
-        shell: "#F6FAF9",
-        panel: "#FFFFFF",
-        panelMuted: "#EEF3F3",
-        ink: "#0C0C20",
-        inkMuted: "#62626D",
-        inkLight: "#8A8A92",
-        line: "#D9DFDF",
-        lineSoft: "#E8ECEC",
+        "border-strong": token("border-strong"),
+        white: token("white"),
+        black: token("black"),
+        brand: token("primary"),
+        brandSoft: token("primary-light"),
+        brandDeep: token("primary-dark"),
+        shell: token("background"),
+        panel: token("surface"),
+        panelMuted: token("surface-muted"),
+        ink: token("text"),
+        inkMuted: token("text-muted"),
+        inkLight: token("text-light"),
+        line: token("border"),
+        lineSoft: token("border-light"),
       },
       spacing: {
         // Common spacing scale used across layouts and components. Add
@@ -113,7 +120,7 @@ const config: Config = {
         sm: "0 1px 2px rgba(2, 48, 71, 0.06)",
         md: "0 4px 12px rgba(2, 48, 71, 0.08)",
         lg: "0 10px 25px rgba(2, 48, 71, 0.12)",
-        focus: "0 0 0 3px rgba(142, 202, 230, 0.45)",
+        focus: "0 0 0 3px rgb(var(--rgb-primary-light) / 0.45)",
       },
       letterSpacing: {
         tight: "-0.02em",

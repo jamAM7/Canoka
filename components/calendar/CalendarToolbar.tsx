@@ -89,7 +89,7 @@ export function CalendarToolbar(props: Props) {
                     s.mark === "diamond" ? "rotate-45 rounded-sm" : ""
                   }`}
                   style={{
-                    background: active ? "#023047" : "#D9DFDF",
+                    background: active ? "var(--color-primary)" : "var(--color-border)",
                   }}
                 />
                 {s.label}
@@ -107,7 +107,7 @@ export function CalendarToolbar(props: Props) {
           >
             Courses
             {props.hiddenCourses.size > 0 && (
-              <span className="inline-flex min-h-[18px] items-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-white">
+              <span className="inline-flex min-h-[18px] items-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-on-primary">
                 {props.courses.length - props.hiddenCourses.size}/{props.courses.length}
               </span>
             )}

@@ -41,11 +41,13 @@ import { EventDetail } from "./EventDetail";
 interface Props {
   events: CalendarEvent[];
   courses: Course[];
+  /** A problem to show above the views, such as a timetable feed that didn't load. */
+  notice?: string;
 }
 
 const ALL_TYPES: CalendarEventType[] = ["class", "assessment", "task"];
 
-export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
+export function CalendarWorkspace({ events: initialEvents, courses, notice }: Props) {
   const [events, setEvents] = useState(initialEvents);
   const [view, setView] = useState<CalendarViewMode>("week");
   const [anchor, setAnchor] = useState<Date>(new Date());
@@ -233,6 +235,8 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
           hiddenTypes={hiddenTypes}
           onToggleType={(t) => setHiddenTypes((s) => toggle(s, t))}
         />
+
+        {notice && <p className="border-b border-border px-6 py-2 text-sm text-error">{notice}</p>}
 
         {/* A flex column, so each view can fill the remaining height and scroll inside it. */}
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">

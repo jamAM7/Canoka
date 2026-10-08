@@ -101,13 +101,13 @@
 }
 
 .notification-icon.overdue {
-    background: #F8E1E1;
+    background: var(--color-error-soft);
     color: var(--color-error);
 }
 
 .notification-icon.soon {
-    background: #FFF0C7;
-    color: #805A00;
+    background: var(--color-warning-soft);
+    color: var(--color-warning-text);
 }
 
 .notification-text {

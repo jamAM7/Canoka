@@ -27,7 +27,7 @@ const HEADING = "mb-2 block text-xs font-semibold uppercase tracking-wide text-t
 const FIELD =
   "w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary-light focus:shadow-focus focus:outline-none";
 const PRIMARY_BUTTON =
-  "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50";
+  "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50";
 const SECONDARY_BUTTON =
   "rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text transition-colors hover:border-primary-light hover:bg-surface-muted";
 /** Output kept on the page, as on the server. */
@@ -474,7 +474,7 @@ export function ScraperSettings({ setup, lastScrape, progress }: Props) {
               const el = e.currentTarget;
               stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
             }}
-            className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md bg-black p-4 font-mono text-xs leading-relaxed text-surface-muted"
+            className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md bg-black p-4 font-mono text-xs leading-relaxed text-white"
           >
             <span className="text-primary-light">$ {run.command}</span>
             {"\n"}

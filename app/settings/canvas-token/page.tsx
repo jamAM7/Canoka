@@ -22,7 +22,7 @@ const LINK = "font-medium text-primary hover:underline";
 const UI = "font-semibold text-text";
 const CODE = "font-mono text-xs";
 const PRIMARY_BUTTON =
-  "inline-flex rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-dark";
+  "inline-flex rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary transition-colors hover:bg-primary-dark";
 
 export default function CanvasTokenPage() {
   const setup = scraperSetup();
@@ -148,7 +148,7 @@ export default function CanvasTokenPage() {
 function Step({ n, title, children }: { n: number; title: string; children: ReactNode }) {
   return (
     <li className="flex gap-4">
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-on-primary">
         {n}
       </span>
       <div className="min-w-0 flex-1 pt-0.5">

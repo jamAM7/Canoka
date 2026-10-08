@@ -9,38 +9,102 @@
        BRAND COLOURS
        Based on the supplied palettes.
        Palette 2 is the primary visual direction.
+
+       Each colour is an "R G B" triplet (--rgb-*), so Tailwind can add
+       opacity (bg-error/10), and a ready-to-use --color-* for CSS.
+       The themes at the end of this file override only the triplets.
        --------------------------------------------------------- */
 
-    --color-primary: #023047;
-    --color-primary-light: #8ECAE6;
-    --color-primary-dark: #012536;
+    --rgb-primary: 2 48 71;              /* #023047 */
+    --rgb-primary-light: 142 202 230;    /* #8ECAE6 */
+    --rgb-primary-dark: 1 37 54;         /* #012536 */
+    /* Text and icons on a filled primary or error background. */
+    --rgb-on-primary: 255 255 255;
 
-    --color-secondary: #FFB703;
-    --color-secondary-dark: #FB8500;
+    --rgb-secondary: 255 183 3;          /* #FFB703 */
+    --rgb-secondary-dark: 251 133 0;     /* #FB8500 */
 
-    --color-accent: #E26D5C;
-    --color-accent-muted: #C9CBA3;
+    --rgb-accent: 226 109 92;            /* #E26D5C */
+    --rgb-accent-muted: 201 203 163;     /* #C9CBA3 */
 
     /* Semantic colours */
-    --color-success: #5F8A62;
-    --color-warning: #FFB703;
-    --color-error: #C94C4C;
-    --color-info: #8ECAE6;
+    --rgb-success: 95 138 98;            /* #5F8A62 */
+    --rgb-warning: 255 183 3;            /* #FFB703 */
+    --rgb-error: 201 76 76;              /* #C94C4C */
+    --rgb-info: 142 202 230;             /* #8ECAE6 */
+
+    /* Soft fills for badges and alerts, their borders, and readable warning text. */
+    --rgb-success-soft: 228 240 229;     /* #E4F0E5 */
+    --rgb-success-border: 201 222 201;   /* #C9DEC9 */
+    --rgb-warning-soft: 255 240 199;     /* #FFF0C7 */
+    --rgb-warning-border: 255 225 154;   /* #FFE19A */
+    --rgb-warning-text: 128 90 0;        /* #805A00 */
+    --rgb-error-soft: 248 225 225;       /* #F8E1E1 */
+    --rgb-error-border: 237 193 193;     /* #EDC1C1 */
+    --rgb-info-soft: 230 244 250;        /* #E6F4FA */
+    --rgb-info-border: 199 232 244;      /* #C7E8F4 */
 
     /* Neutrals */
-    --color-text: #0C0C20;
-    --color-text-muted: #62626D;
-    --color-text-light: #8A8A92;
+    --rgb-text: 12 12 32;                /* #0C0C20 */
+    --rgb-text-muted: 98 98 109;         /* #62626D */
+    --rgb-text-light: 112 112 122;       /* #70707A: 4.9:1 on white (was #8A8A92, 3.4:1) */
 
-    --color-background: #F6FAF9;
-    --color-surface: #FFFFFF;
-    --color-surface-muted: #EEF3F3;
+    --rgb-background: 246 250 249;       /* #F6FAF9 */
+    --rgb-surface: 255 255 255;          /* #FFFFFF */
+    --rgb-surface-muted: 238 243 243;    /* #EEF3F3 */
 
-    --color-border: #D9DFDF;
-    --color-border-light: #E8ECEC;
+    --rgb-border: 217 223 223;           /* #D9DFDF */
+    --rgb-border-light: 232 236 236;     /* #E8ECEC */
+    --rgb-border-strong: 203 211 211;    /* #CBD3D3 */
+    --rgb-border-dark: 175 175 175;      /* #AFAFAF */
 
-    --color-white: #FFFFFF;
-    --color-black: #0C0C20;
+    --rgb-white: 255 255 255;
+    --rgb-black: 12 12 32;
+
+    /* Course colours' text on their tinted event blocks (lib/calendar/colors.ts). */
+    --course-violet-fg: #8A3327;
+    --course-amber-fg: #805A00;
+    --course-cyan-fg: #5B5D3F;
+
+    --color-primary: rgb(var(--rgb-primary));
+    --color-primary-light: rgb(var(--rgb-primary-light));
+    --color-primary-dark: rgb(var(--rgb-primary-dark));
+    --color-on-primary: rgb(var(--rgb-on-primary));
+    --color-secondary: rgb(var(--rgb-secondary));
+    --color-secondary-dark: rgb(var(--rgb-secondary-dark));
+    --color-accent: rgb(var(--rgb-accent));
+    --color-accent-muted: rgb(var(--rgb-accent-muted));
+    --color-success: rgb(var(--rgb-success));
+    --color-warning: rgb(var(--rgb-warning));
+    --color-error: rgb(var(--rgb-error));
+    --color-info: rgb(var(--rgb-info));
+    --color-success-soft: rgb(var(--rgb-success-soft));
+    --color-success-border: rgb(var(--rgb-success-border));
+    --color-warning-soft: rgb(var(--rgb-warning-soft));
+    --color-warning-border: rgb(var(--rgb-warning-border));
+    --color-warning-text: rgb(var(--rgb-warning-text));
+    --color-error-soft: rgb(var(--rgb-error-soft));
+    --color-error-border: rgb(var(--rgb-error-border));
+    --color-info-soft: rgb(var(--rgb-info-soft));
+    --color-info-border: rgb(var(--rgb-info-border));
+    --color-text: rgb(var(--rgb-text));
+    --color-text-muted: rgb(var(--rgb-text-muted));
+    --color-text-light: rgb(var(--rgb-text-light));
+    --color-background: rgb(var(--rgb-background));
+    --color-surface: rgb(var(--rgb-surface));
+    --color-surface-muted: rgb(var(--rgb-surface-muted));
+    --color-border: rgb(var(--rgb-border));
+    --color-border-light: rgb(var(--rgb-border-light));
+    --color-border-strong: rgb(var(--rgb-border-strong));
+    --color-border-dark: rgb(var(--rgb-border-dark));
+    --color-white: rgb(var(--rgb-white));
+    --color-black: rgb(var(--rgb-black));
+
+    /* The colour drop shadows and the scrim behind side panels are made of. */
+    --rgb-shadow: 12 12 32;
+
+    /* Native controls (scrollbars, date pickers) follow the theme. */
+    color-scheme: light;
 
 
     /* ---------------------------------------------------------
@@ -103,7 +167,7 @@
     --radius-xl: 16px;
     --radius-pill: 999px;
 
-    --focus-ring: 0 0 0 3px rgba(142, 202, 230, 0.45);
+    --focus-ring: 0 0 0 3px rgb(var(--rgb-primary-light) / 0.45);
 
 
     /* ---------------------------------------------------------
@@ -138,4 +202,159 @@
     --breakpoint-mobile: 640px;
     --breakpoint-tablet: 900px;
     --breakpoint-desktop: 1200px;
+}
+
+
+/* =========================================================
+   THEMES
+   Settings › Appearance (lib/ui/preferences) sets data-theme and
+   data-contrast on <html> before the page first paints. They
+   override only the --rgb-* triplets above.
+   ========================================================= */
+
+:root[data-theme="dark"] {
+    --rgb-primary: 142 202 230;          /* light blue: navy wouldn't read on dark */
+    --rgb-primary-light: 79 155 191;
+    --rgb-primary-dark: 181 222 240;     /* hover goes lighter, not darker */
+    --rgb-on-primary: 6 22 31;
+
+    --rgb-secondary: 255 193 46;
+    --rgb-secondary-dark: 255 159 64;
+    --rgb-accent: 236 138 125;
+    --rgb-accent-muted: 178 181 140;
+
+    --rgb-success: 129 186 133;
+    --rgb-warning: 255 201 60;
+    --rgb-error: 240 128 128;
+    --rgb-info: 142 202 230;
+
+    --rgb-success-soft: 30 51 35;
+    --rgb-success-border: 54 89 60;
+    --rgb-warning-soft: 58 47 18;
+    --rgb-warning-border: 102 81 24;
+    --rgb-warning-text: 245 196 81;
+    --rgb-error-soft: 61 31 31;
+    --rgb-error-border: 110 52 52;
+    --rgb-info-soft: 22 48 64;
+    --rgb-info-border: 40 82 104;
+
+    --rgb-text: 232 238 240;
+    --rgb-text-muted: 172 184 190;
+    --rgb-text-light: 145 158 165;
+
+    --rgb-background: 14 20 23;
+    --rgb-surface: 22 32 38;
+    --rgb-surface-muted: 30 42 49;
+
+    --rgb-border: 49 63 71;
+    --rgb-border-light: 37 50 58;
+    --rgb-border-strong: 60 76 85;
+    --rgb-border-dark: 96 112 120;
+
+    --course-violet-fg: #F2A99F;
+    --course-amber-fg: #F5C451;
+    --course-cyan-fg: #D9DBB8;
+
+    --rgb-shadow: 0 0 0;
+
+    color-scheme: dark;
+}
+
+/* High contrast: near-black text and dark borders, so nothing relies on pale grey. */
+:root[data-contrast="high"] {
+    --rgb-text: 0 0 0;
+    --rgb-text-muted: 40 40 50;
+    --rgb-text-light: 60 60 70;
+    --rgb-background: 255 255 255;
+    --rgb-surface-muted: 238 241 241;
+    --rgb-border: 90 100 100;
+    --rgb-border-light: 120 130 130;
+    --rgb-border-strong: 70 80 80;
+    --rgb-border-dark: 40 40 40;
+    --rgb-primary-light: 0 92 138;
+    --rgb-success: 30 100 40;
+    --rgb-error: 170 20 20;
+    --rgb-warning-text: 90 60 0;
+    --course-violet-fg: #5E1A10;
+    --course-amber-fg: #5A3E00;
+    --course-cyan-fg: #33351F;
+    --focus-ring: 0 0 0 3px rgb(var(--rgb-text));
+}
+
+:root[data-theme="dark"][data-contrast="high"] {
+    --rgb-text: 255 255 255;
+    --rgb-text-muted: 225 232 235;
+    --rgb-text-light: 205 214 218;
+    --rgb-background: 0 0 0;
+    --rgb-surface: 8 12 14;
+    --rgb-surface-muted: 24 30 34;
+    --rgb-border: 150 165 172;
+    --rgb-border-light: 120 135 142;
+    --rgb-border-strong: 170 184 190;
+    --rgb-border-dark: 210 220 225;
+    --rgb-primary: 170 220 242;
+    --rgb-primary-light: 210 236 248;
+    --rgb-primary-dark: 220 240 250;
+    --rgb-success: 150 220 155;
+    --rgb-error: 255 150 150;
+    --rgb-warning-text: 255 214 102;
+    --course-violet-fg: #FFC4BB;
+    --course-amber-fg: #FFD978;
+    --course-cyan-fg: #ECEECF;
+}
+
+
+/* =========================================================
+   READING PREFERENCES
+   Also from Settings › Appearance, as attributes on <html>.
+   ========================================================= */
+
+/* Text size scales every rem, so spacing grows with the text. */
+:root[data-text-size="large"] { --text-scale: 1.125; }
+:root[data-text-size="larger"] { --text-scale: 1.25; }
+:root[data-text-size="largest"] { --text-scale: 1.5; }
+
+/* Wider letter, word and line spacing (WCAG 1.4.12), easier for low vision and dyslexia. */
+:root[data-spacing="wide"] body {
+    letter-spacing: 0.04em;
+    word-spacing: 0.12em;
+    line-height: 1.75;
+}
+
+/* Links are told apart by more than colour. */
+:root[data-underline-links="on"] a {
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+}
+
+/* No animation: the setting, or the operating system asking for it. */
+:root[data-motion="reduce"] *,
+:root[data-motion="reduce"] *::before,
+:root[data-motion="reduce"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Keyboard focus is always visible, whatever a component's own focus style. */
+:focus-visible {
+    outline: 3px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+:root[data-contrast="high"] :focus-visible {
+    outline: 3px solid var(--color-text);
+    outline-offset: 3px;
 }
