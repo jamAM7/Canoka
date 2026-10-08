@@ -1,17 +1,23 @@
 // Calendar: classes, assessment tasks, self/AI tasks.
 // Weekly is the primary view; monthly and Kanban are switchable from the toolbar.
 //
-// Data is mocked in `lib/calendar/mock-data` for this frontend pass. Replace
-// with a Supabase query over `calendar_events` when the backend is ready.
+// Subjects and assessments come from the Canvas scraper's last run
+// (`lib/scraper/calendar`). Replace with a Supabase query over
+// `calendar_events` when the backend is ready.
 import { CalendarWorkspace } from "@/components/calendar/CalendarWorkspace";
-import { MOCK_COURSES, MOCK_EVENTS } from "@/lib/calendar/mock-data";
+import { loadCalendarData } from "@/lib/scraper/calendar";
 
 export const metadata = { title: "Calendar · Canoka" };
 
-export default function CalendarPage() {
+// Read the scraper's output on every request, so a new scrape shows up on reload.
+export const dynamic = "force-dynamic";
+
+export default async function CalendarPage() {
+  const { events, courses } = await loadCalendarData();
+
   return (
     <main>
-      <CalendarWorkspace events={MOCK_EVENTS} courses={MOCK_COURSES} />
+      <CalendarWorkspace events={events} courses={courses} />
     </main>
   );
 }

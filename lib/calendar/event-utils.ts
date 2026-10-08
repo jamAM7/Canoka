@@ -21,17 +21,24 @@ export const DAY_START_HOUR = 0;
 export const DAY_END_HOUR = 23;
 export const HOUR_ROW_PX = 56;
 
-export function parse(ev: CalendarEvent): { start: Date; end: Date } {
+/** An event with a place on the calendar: all but an assessment with no due date. */
+export type ScheduledEvent = CalendarEvent & { start: string; end: string };
+
+export function isScheduled(ev: CalendarEvent): ev is ScheduledEvent {
+  return ev.start !== undefined && ev.end !== undefined;
+}
+
+export function parse(ev: ScheduledEvent): { start: Date; end: Date } {
   return { start: new Date(ev.start), end: new Date(ev.end) };
 }
 
-export function eventsOnDay(events: CalendarEvent[], day: Date): CalendarEvent[] {
+export function eventsOnDay(events: ScheduledEvent[], day: Date): ScheduledEvent[] {
   return events
     .filter((ev) => isSameDay(new Date(ev.start), day))
     .sort((a, b) => +new Date(a.start) - +new Date(b.start));
 }
 
-export function eventsInWeek(events: CalendarEvent[], anchor: Date): CalendarEvent[] {
+export function eventsInWeek(events: ScheduledEvent[], anchor: Date): ScheduledEvent[] {
   const start = startOfWeek(anchor, WEEK_OPTS);
   const end = endOfWeek(anchor, WEEK_OPTS);
   return events.filter((ev) =>
@@ -40,7 +47,7 @@ export function eventsInWeek(events: CalendarEvent[], anchor: Date): CalendarEve
 }
 
 /** Vertical placement of an event within the day grid, in pixels. */
-export function gridPlacement(ev: CalendarEvent, day: Date) {
+export function gridPlacement(ev: ScheduledEvent, day: Date) {
   const { start, end } = parse(ev);
   const dayStart = startOfDay(day);
   const minutesFromMidnight = differenceInMinutes(start, dayStart);
@@ -56,15 +63,15 @@ export function gridPlacement(ev: CalendarEvent, day: Date) {
  * Lane assignment so overlapping events in a day sit side by side instead of
  * stacking on top of each other.
  */
-export function layoutDayColumn(events: CalendarEvent[]): Array<{
-  event: CalendarEvent;
+export function layoutDayColumn(events: ScheduledEvent[]): Array<{
+  event: ScheduledEvent;
   lane: number;
   lanes: number;
 }> {
   const sorted = [...events].sort(
     (a, b) => +new Date(a.start) - +new Date(b.start),
   );
-  const result: Array<{ event: CalendarEvent; lane: number; lanes: number }> = [];
+  const result: Array<{ event: ScheduledEvent; lane: number; lanes: number }> = [];
   let cluster: typeof result = [];
   let clusterEnd = 0;
 
@@ -119,7 +126,7 @@ export const STATUS_ORDER: TaskStatus[] = [
  *   (so editing only the start time shifts the block instead of collapsing it).
  */
 export function rescheduleEvent(
-  ev: CalendarEvent,
+  ev: ScheduledEvent,
   fields: { date?: string; startTime?: string; endTime?: string },
 ): { start: string; end: string } {
   const { start, end } = parse(ev);
@@ -143,7 +150,7 @@ export function rescheduleEvent(
   return { start: nextStart.toISOString(), end: nextEnd.toISOString() };
 }
 
-export function formatEventTime(ev: CalendarEvent): string {
+export function formatEventTime(ev: ScheduledEvent): string {
   const { start, end } = parse(ev);
   return `${format(start, "h:mm")}–${format(end, "h:mm a")}`;
 }

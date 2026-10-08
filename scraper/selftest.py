@@ -18,7 +18,7 @@ from pathlib import Path
 from canvas.build import SubjectBuilder, compute_weights
 from canvas.client import DAY, HOUR, CanvasClient, CanvasError, CanvasForbidden
 from canvas.content import extract_links, file_to_text, html_to_markdown
-from canvas.render import INLINE_LIMIT, _attachment_lines, render_module, week_label
+from canvas.render import INLINE_LIMIT, _attachment_lines, render_module, render_week, week_label
 
 BRIEF = """
 <h2>Task</h2>
@@ -337,6 +337,20 @@ def main() -> int:
                 "### Assignment 1" in rubric_md)
     ok &= check("marking criteria render as a table",
                 "| Criterion | Marks | Excellent |" in rubric_md)
+
+    print("\nweeks")
+    week_md = render_week(document, 1) or ""
+    ok &= check("a week brings in the module named for it", "Greedy" in week_md)
+    ok &= check("a week nothing names is None, not an empty view", render_week(document, 9) is None)
+    loose = json.loads(json.dumps(document))
+    loose["modules"].append({"name": "Learning Contents", "items": [
+        {"title": "Week 2 - Slides.pdf", "type": "File", "content_id": "999"}]})
+    loose["assessments"].append({"id": "200", "name": "Week 2 Journal"})
+    week2 = render_week(loose, 2) or ""
+    ok &= check("items named for the week in an unnumbered module come along",
+                "Week 2 - Slides.pdf" in week2)
+    ok &= check("an assessment named for the week comes along", "### Week 2 Journal" in week2)
+    ok &= check("another week's items stay out", "Greedy" not in week2)
 
     print("\npdf to markdown")
     try:

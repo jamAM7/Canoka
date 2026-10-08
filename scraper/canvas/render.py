@@ -176,16 +176,20 @@ def _attachment_lines(ids: list[str], files_by_id: dict, floor: int = 5) -> list
         return []
     lines = ["", "**Attached**", ""]
     for record in named:
-        extracted = record.get("extracted") or {}
-        text = (extracted.get("text") or "").strip()
-        converted = record.get("markdown_path")
-        if text and len(text) <= INLINE_LIMIT:
-            lines += [f"- {record.get('name')}", "", _demote(text, floor=floor), ""]
-        elif converted:
-            lines.append(f"- {record.get('name')} \u2014 converted, see `{converted}`")
-        else:
-            lines.append(f"- {record.get('name')}")
+        lines += _file_lines(record, floor)
     return lines
+
+
+def _file_lines(record: dict, floor: int) -> list[str]:
+    """One file: inlined when its extracted text is short, otherwise named."""
+    extracted = record.get("extracted") or {}
+    text = (extracted.get("text") or "").strip()
+    converted = record.get("markdown_path")
+    if text and len(text) <= INLINE_LIMIT:
+        return [f"- {record.get('name')}", "", _demote(text, floor=floor), ""]
+    if converted:
+        return [f"- {record.get('name')} \u2014 converted, see `{converted}`"]
+    return [f"- {record.get('name')}"]
 
 
 def _header(document: dict) -> list[str]:
@@ -257,10 +261,15 @@ def render_module(document: dict, module: dict) -> str:
     """One module: its pages inlined, its assessments, its marking criteria."""
     pages = _pages_by_slug(document)
     files_by_id = {f["id"]: f for f in document.get("files") or []}
-    week = week_label(module.get("name"))
-
     lines = _header(document)
-    lines += ["", f"## {module.get('name')}"]
+    lines += _module_lines(document, module, pages, files_by_id)
+    lines += _gaps(document)
+    return "\n".join(lines).strip() + "\n"
+
+
+def _module_lines(document: dict, module: dict, pages: dict, files_by_id: dict) -> list[str]:
+    week = week_label(module.get("name"))
+    lines = ["", f"## {module.get('name')}"]
     if week:
         lines.append(f"_Week {week}_")
 
@@ -297,9 +306,63 @@ def render_module(document: dict, module: dict) -> str:
 
     if missing:
         lines += ["", f"_Named but not retrieved: {', '.join(missing)}._"]
+    return lines
 
-    lines += _gaps(document)
-    return "\n".join(lines).strip() + "\n"
+
+def render_week(document: dict, week: int) -> str | None:
+    """Everything Canvas holds for one week of a subject, or None if nothing names it.
+
+    Subjects keep their weeks in different places, so this looks in each:
+    modules named for the week (41201, 41028), rendered as a module view is;
+    items named for it inside an unnumbered module (41129 files its weekly
+    slides under "Learning Contents"); and assessments named for it (41129's
+    weekly journals). 41052 names no weeks at all, so every week is None there.
+    """
+    pages = _pages_by_slug(document)
+    files_by_id = {f["id"]: f for f in document.get("files") or []}
+    modules = document.get("modules") or []
+    lines: list[str] = []
+    covered: set = set()
+
+    for module in modules:
+        if week_label(module.get("name")) == week and has_content(document, module):
+            lines += _module_lines(document, module, pages, files_by_id)
+            covered |= {a.get("id") for a in assessments_for(document, module)}
+
+    items = [item for module in modules if week_label(module.get("name")) is None
+             for item in module.get("items") or [] if week_label(item.get("title")) == week]
+    item_lines = _item_lines(items, pages, files_by_id)
+    if item_lines:
+        lines += ["", f"## Week {week} in other modules", *item_lines]
+
+    others = [a for a in document.get("assessments") or []
+              if a.get("id") not in covered and week_label(a.get("name")) == week]
+    if others:
+        lines += ["", "## Assessment"]
+        for assessment in others:
+            lines += _assessment_lines(assessment, files_by_id)
+
+    if not lines:
+        return None
+    return "\n".join(_header(document) + lines + _gaps(document)).strip() + "\n"
+
+
+def _item_lines(items: list[dict], pages: dict, files_by_id: dict) -> list[str]:
+    """Module items on their own: a page's body inlined, a file or link named."""
+    lines: list[str] = []
+    for item in items:
+        page = pages.get(item.get("page_url") or "")
+        body = (page or {}).get("content") or ""
+        if page and not page.get("boilerplate") and body.strip():
+            lines += ["", f"### {page.get('title')}", "", _demote(body.strip(), floor=4)]
+            lines += _attachment_lines(page.get("attachments") or [], files_by_id)
+        elif item.get("type") == "File":
+            # A file's text is only here when the scrape ran with --extract.
+            record = files_by_id.get(item.get("content_id"))
+            lines += _file_lines(record, floor=4) if record else [f"- {item.get('title')}"]
+        elif item.get("type") == "ExternalUrl" and item.get("external_url"):
+            lines.append(f"- [{item.get('title')}]({item['external_url']})")
+    return lines
 
 
 def render_subject(document: dict) -> str:

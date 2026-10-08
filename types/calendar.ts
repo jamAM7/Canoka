@@ -98,10 +98,14 @@ export interface CalendarEvent {
   id: string;
   title: string;
   type: CalendarEventType;
-  /** ISO 8601. For assessments/tasks this is when the work is scheduled. */
-  start: string;
-  /** ISO 8601. */
-  end: string;
+  /**
+   * ISO 8601. For classes and tasks, when they're booked. An assessment sits
+   * on its due date, so one Canvas gives no due date has no start or end: it's
+   * on the Kanban board but not the calendar.
+   */
+  start?: string;
+  /** ISO 8601. Present whenever `start` is. */
+  end?: string;
   courseId?: string;
   location?: string;
   notes?: string;

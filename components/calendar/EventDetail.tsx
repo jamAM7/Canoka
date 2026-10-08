@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { format } from "date-fns";
 import type { CalendarEvent, Course } from "@/types/calendar";
-import { formatEventTime, typeLabel } from "@/lib/calendar/event-utils";
+import { formatEventTime, isScheduled, typeLabel, type ScheduledEvent } from "@/lib/calendar/event-utils";
 import { isBoardCard } from "@/lib/calendar/kanban";
 import { courseTone } from "@/types/calendar";
 import { CardEditor, type CardEditorProps } from "./CardEditor";
@@ -36,11 +36,13 @@ export function EventDetail({ event, ...editor }: Props) {
           (isBoardCard(event) ? (
             <CardEditor key={event.id} layout="panel" event={event} {...editor} />
           ) : (
-            <ClassDetail
-              event={event}
-              course={editor.courses.find((c) => c.id === event.courseId)}
-              onClose={onClose}
-            />
+            isScheduled(event) && (
+              <ClassDetail
+                event={event}
+                course={editor.courses.find((c) => c.id === event.courseId)}
+                onClose={onClose}
+              />
+            )
           ))}
       </aside>
     </>
@@ -52,7 +54,7 @@ function ClassDetail({
   course,
   onClose,
 }: {
-  event: CalendarEvent;
+  event: ScheduledEvent;
   course?: Course;
   onClose: () => void;
 }) {

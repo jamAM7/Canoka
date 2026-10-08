@@ -1,0 +1,79 @@
+# Checks that `npm install` leaves every dev with a working scraper venv, on
+# each OS the team uses, with an older Python and the newest. Runs when
+# anything it depends on changes, or by hand from the Actions tab.
+
+name: Python setup
+
+on:
+  push:
+    paths:
+      - scripts/setup-python.mjs
+      - scraper/**
+      - llm/requirements.txt
+      - package.json
+      - .github/workflows/python-setup.yml
+  pull_request:
+    paths:
+      - scripts/setup-python.mjs
+      - scraper/**
+      - llm/requirements.txt
+      - package.json
+      - .github/workflows/python-setup.yml
+  workflow_dispatch:
+
+jobs:
+  setup:
+    name: ${{ matrix.os }}, Python ${{ matrix.python }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        python: ["3.10", "3.14"]
+        include:
+          # Point PYTHON at 3.10. With 3.14 the script finds a Python itself
+          # (py -3 on Windows, python3 elsewhere), as on a dev's machine.
+          - python: "3.10"
+            pin: true
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      # Windows pipes default to cp1252, which can't print everything the self-test does.
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-python@v6
+        id: python
+        with:
+          python-version: ${{ matrix.python }}
+
+      # CI cleared, so the postinstall hook sets Python up as it would for a dev.
+      - name: npm ci
+        run: npm ci
+        env:
+          CI: ""
+          PYTHON: ${{ matrix.pin && steps.python.outputs.python-path || '' }}
+      - name: npm run setup:python, which fails if any requirement is missing
+        run: npm run setup:python
+
+      - name: Every package imports
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then py="$PWD/.venv/Scripts/python.exe"; else py="$PWD/.venv/bin/python"; fi
+          echo "VENV_PYTHON=$py" >> "$GITHUB_ENV"
+          "$py" --version
+          "$py" -c "import requests, bs4, markdownify, pymupdf4llm, pypdf, pptx, docx, openpyxl, anthropic, dotenv; from zoneinfo import ZoneInfo; ZoneInfo('Australia/Sydney')"
+      - name: Scraper self-test
+        working-directory: scraper
+        run: '"$VENV_PYTHON" selftest.py'
+      - name: The npm run dev hook has nothing left to do
+        run: |
+          npm run predev 2>&1 | tee hook.log
+          ! grep -E "Installing|Creating|wouldn't" hook.log
+        env:
+          CI: ""

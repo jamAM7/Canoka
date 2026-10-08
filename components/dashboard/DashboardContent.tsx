@@ -153,6 +153,16 @@ export function DashboardContent({ events, courses }: Props) {
             <p className="mt-1 text-sm text-text-muted">Quick links into each subject&apos;s notes.</p>
           </div>
 
+          {courses.length === 0 && (
+            <p className="py-4 text-sm text-text-muted">
+              No subjects yet. Run the Canvas scraper from{" "}
+              <Link href="/settings" className="font-medium text-primary hover:underline">
+                Settings
+              </Link>
+              , then reload this page.
+            </p>
+          )}
+
           <div className="flex flex-wrap gap-3">
             {courses.map((course) => {
               const tone = courseTone(course.color);
