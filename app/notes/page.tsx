@@ -1,23 +1,35 @@
-// Notes overview: the subjects the Canvas scraper found -> their notes.
-// TODO: per-week notes, and load/save notes via `subjects` + `notes` in Supabase.
+// Notes overview: the student's subjects and weeks from Supabase -> their notes.
 import { Sidebar } from "@/components/shell/Sidebar";
 import { NotesContent } from "@/components/notes/NotesContent";
-import { loadSubjects } from "@/lib/scraper/subjects";
+import { currentUser } from "@/lib/data/user";
+import { getNotesOverview } from "@/lib/data/notes";
 
 export const metadata = { title: "Notes · Canoka" };
 
-// Read the scraper's output on every request, so a new scrape shows up on reload.
+// Read the database on every request, so a new sync or note shows up on reload.
 export const dynamic = "force-dynamic";
 
 export default async function NotesPage() {
-  const subjects = await loadSubjects();
-
   return (
     <div className="app-shell">
       <Sidebar active="notes" />
-      <main className="main">
-        <NotesContent subjects={subjects} />
-      </main>
+      <main className="main">{await content()}</main>
     </div>
   );
+}
+
+async function content() {
+  try {
+    const user = await currentUser();
+    const { subjects, notes } = await getNotesOverview(user.id);
+    return <NotesContent subjects={subjects} initialNotes={notes} />;
+  } catch (error) {
+    return (
+      <div className="p-8 md:p-10">
+        <p className="text-error">
+          Couldn&apos;t load your notes: {error instanceof Error ? error.message : String(error)}
+        </p>
+      </div>
+    );
+  }
 }

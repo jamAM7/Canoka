@@ -5,7 +5,8 @@ import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/r
 import StarterKit from "@tiptap/starter-kit";
 import { TableKit } from "@tiptap/extension-table";
 import { Placeholder } from "@tiptap/extensions";
-import { noteText, type Note } from "@/lib/notes/storage";
+import { docText } from "@/lib/notes/text";
+import type { Note } from "@/lib/notes/storage";
 import {
   BulletListIcon,
   ChevronIcon,
@@ -32,7 +33,7 @@ const EDITOR_PROPS = { attributes: { class: "note-editor-content", "aria-label":
 const IS_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
 // The open note: its title, and its text in a rich-text editor (TipTap) with
-// basic formatting and tables, saved as HTML. Markdown-style typing works too:
+// basic formatting and tables, saved as TipTap JSON. Markdown-style typing works too:
 // "# " starts a heading, "- " a list, "> " a quote, **bold** and *italic*.
 // Render with key={note.id}, so the editor and delete confirmation start fresh per note.
 export function NoteEditor({ note, onChange, onDelete }: Props) {
@@ -45,7 +46,7 @@ export function NoteEditor({ note, onChange, onDelete }: Props) {
     editorProps: EDITOR_PROPS,
     // Notes load after mount, so this only ever renders in the browser.
     immediatelyRender: true,
-    onUpdate: ({ editor }) => onChange({ content: editor.getHTML() }),
+    onUpdate: ({ editor }) => onChange({ content: editor.getJSON() }),
   });
   const state = useEditorState({
     editor,
@@ -175,7 +176,7 @@ export function NoteEditor({ note, onChange, onDelete }: Props) {
         placeholder="Untitled"
         aria-label="Note title"
         // A new, empty note opens with the cursor in its title.
-        autoFocus={!note.title && !noteText(note.content).trim()}
+        autoFocus={!note.title && !docText(note.content).trim()}
       />
       <EditorContent editor={editor} />
     </>

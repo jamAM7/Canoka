@@ -14,10 +14,16 @@ MODEL = "claude-sonnet-4-6"
 
 
 def needs_subtasks(assessment):
-    """Skip trivial/placeholder assessments (weekly journals, participation marks)."""
-    if assessment.get("points_possible", 0) <= 2:
+    """Skip trivial/placeholder assessments (weekly journals, participation marks).
+
+    A missing weight or points value (the scrape has none when Canvas doesn't say)
+    means unknown, not small: comparing None used to raise TypeError here.
+    """
+    points = assessment.get("points_possible")
+    if points is not None and points <= 2:
         return False
-    if assessment.get("weight_pct", 0) < 10:
+    weight = assessment.get("weight_pct")
+    if weight is not None and weight < 10:
         return False
     return True
 

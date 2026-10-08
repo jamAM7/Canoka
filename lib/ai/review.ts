@@ -26,9 +26,16 @@ export interface ReviewRequest {
   subject: string;
   week: number;
   weekTitle: string | null;
-  /** The week's Canvas content as markdown, or null if nothing in the last scrape names the week. */
+  /** The week's Canvas content as markdown, from course_content, or null if there is none stored. */
   weekContent: string | null;
+  /** The student's notes for the week; `content` is plain text (notes.plain_text). */
   notes: { title: string; content: string }[];
+}
+
+export interface ReviewResult {
+  review: NotesReview;
+  /** The model that answered, which can differ from MODEL when a declined request is retried. */
+  model: string;
 }
 
 /** A failure with a message fit to show the student. */
@@ -42,7 +49,7 @@ Compare the notes with that week's course content from Canvas. Tell the student 
 
 Be specific: name the actual concepts, never just "add more detail". Write to the student as "you", plainly and briefly.`;
 
-export async function reviewNotes(request: ReviewRequest): Promise<NotesReview> {
+export async function reviewNotes(request: ReviewRequest): Promise<ReviewResult> {
   const key = anthropicKey();
   const client = new Anthropic(key ? { apiKey: key } : {});
   const week = request.weekTitle ? `Week ${request.week}: ${request.weekTitle}` : `Week ${request.week}`;
@@ -71,12 +78,12 @@ export async function reviewNotes(request: ReviewRequest): Promise<NotesReview> 
               // it goes first and is cached; the notes, which change, come after it.
               text: request.weekContent
                 ? `<course_content>\n${request.weekContent}\n</course_content>`
-                : `<course_content>None. Nothing in the last Canvas scrape names ${week} of this subject.</course_content>`,
+                : `<course_content>None. No course content is stored for ${week} of this subject.</course_content>`,
               cache_control: { type: "ephemeral" },
             },
             {
               type: "text",
-              text: `Subject: ${request.subject}\n${week}\n\nThe student's notes for this week, as HTML from their editor:\n\n<notes>\n${notes}\n</notes>`,
+              text: `Subject: ${request.subject}\n${week}\n\nThe student's notes for this week, as plain text:\n\n<notes>\n${notes}\n</notes>`,
             },
           ],
         },
@@ -89,10 +96,11 @@ export async function reviewNotes(request: ReviewRequest): Promise<NotesReview> 
   if (response.stop_reason === "refusal") throw new ReviewError("Claude declined to review these notes.");
   if (response.stop_reason === "max_tokens") throw new ReviewError("The review ran too long to finish. Try again.");
   if (!response.parsed_output) throw new ReviewError("The review came back unreadable. Try again.");
-  return response.parsed_output;
+  return { review: response.parsed_output, model: response.model || MODEL };
 }
 
-function describe(error: unknown, key: string | null): string {
+/** A message fit to show for a failed Anthropic call. */
+export function describe(error: unknown, key: string | null): string {
   if (error instanceof Anthropic.AuthenticationError) {
     return "Anthropic rejected the API key. Check it in Settings.";
   }

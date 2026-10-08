@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { CalendarEventType, Course } from "@/types/calendar";
 import { courseTone } from "@/lib/calendar/colors";
 import { ChevronIcon } from "@/components/shell/icons";
+import { GenerateSubtasksButton } from "./GenerateSubtasksButton";
 
 interface Props {
   period: { title: string; subtitle?: string };
@@ -97,6 +98,8 @@ export function CalendarToolbar(props: Props) {
           })}
         </div>
 
+        <div className="flex flex-wrap items-start gap-3">
+        <GenerateSubtasksButton />
         <div className="relative">
           <button
             onClick={() => setFiltersOpen((o) => !o)}
@@ -135,6 +138,7 @@ export function CalendarToolbar(props: Props) {
               </div>
             </>
           )}
+        </div>
         </div>
       </div>
     </header>
