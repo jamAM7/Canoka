@@ -73,15 +73,15 @@ const config: Config = {
         12: "3rem",
         16: "4rem",
         20: "5rem",
-        sidebar: "240px",
+        sidebar: "200px",
         navbar: "72px",
       },
       fontFamily: {
-        // We use the Karla variable injected by next/font. Keep only
-        // Karla + a generic fallback to avoid unexpected font swaps.
-        sans: ["var(--font-karla)", "Karla", "sans-serif"],
-        body: ["var(--font-karla)", "Karla", "sans-serif"],
-        heading: ["var(--font-karla)", "Karla", "sans-serif"],
+        // Fonts injected by next/font: Poppins for body text, Sintony
+        // for headings (h1–h6 pick it up from styles.css).
+        sans: ["var(--font-poppins)", "Poppins", "sans-serif"],
+        body: ["var(--font-poppins)", "Poppins", "sans-serif"],
+        heading: ["var(--font-sintony)", "Sintony", "sans-serif"],
       },
       fontSize: {
         // Font-size scale (value + line-height). Use `text-sm`, `text-lg` etc.

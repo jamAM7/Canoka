@@ -1,5 +1,5 @@
 // Notes overview: the student's subjects and weeks from Supabase -> their notes.
-import { Sidebar } from "@/components/shell/Sidebar";
+import { NavBar } from "@/components/shell/NavBar";
 import { NotesContent } from "@/components/notes/NotesContent";
 import { currentUser } from "@/lib/data/user";
 import { getNotesOverview } from "@/lib/data/notes";
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function NotesPage() {
   return (
     <div className="app-shell">
-      <Sidebar active="notes" />
+      <NavBar active="notes" />
       <main className="main">{await content()}</main>
     </div>
   );

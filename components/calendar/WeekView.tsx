@@ -21,6 +21,7 @@ import {
   type ScheduledEvent,
 } from "@/lib/calendar/event-utils";
 import { courseTone } from "@/lib/calendar/colors";
+import { FlagIcon } from "@/components/shell/icons";
 
 interface Props {
   anchor: Date;
@@ -81,11 +82,12 @@ export function WeekView({ anchor, events, courseById, onSelect }: Props) {
                   <button
                     key={ev.id}
                     onClick={() => onSelect(ev.id)}
-                    className="w-full truncate rounded-md px-2 py-1 text-sm"
+                    className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-sm"
                     style={{ background: tone.bg, color: tone.fg }}
                     title={`Due: ${ev.title}`}
                   >
-                    ⚑ {ev.title}
+                    <FlagIcon className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{ev.title}</span>
                   </button>
                 );
               })}

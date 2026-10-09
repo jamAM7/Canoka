@@ -1,7 +1,7 @@
 // Home dashboard — scoped to exactly what the README assigns it:
 // notifications, "due this week", and quick links into notes.
 // Reads the student's subjects and assessments from Supabase on every request.
-import { Sidebar } from "@/components/shell/Sidebar";
+import { NavBar } from "@/components/shell/NavBar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { currentUser } from "@/lib/data/user";
 import { getCalendarEvents, getCourses } from "@/lib/data/calendar";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   return (
     <div className="app-shell">
-      <Sidebar active="dashboard" />
+      <NavBar active="dashboard" />
       <main className="main">{await content()}</main>
     </div>
   );

@@ -18,6 +18,9 @@ html {
     /* 100% keeps the browser's own text size setting; Settings › Appearance scales it. */
     font-size: calc(100% * var(--text-scale, 1));
     scroll-behavior: smooth;
+    /* Reserve the scrollbar's width on every page, so the nav doesn't jump
+       sideways between pages that scroll (Notes) and ones that don't. */
+    scrollbar-gutter: stable;
 }
 
 body {
@@ -240,10 +243,10 @@ h6 {
    4. APP SHELL / NAVIGATION
    ========================================================= */
 
-/* The first column takes the Sidebar's own width, which changes when it collapses. */
+/* The NavBar runs across the top; the page content fills the rest. */
 .app-shell {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
 }
 
@@ -309,6 +312,7 @@ h6 {
 }
 
 .main {
+    flex: 1;
     min-width: 0;
 }
 
@@ -1388,7 +1392,6 @@ h6 {
 
 @media (max-width: 1100px) {
     :root {
-        --sidebar-width: 210px;
         --page-padding: var(--space-6);
     }
 
