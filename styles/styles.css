@@ -250,6 +250,11 @@ h6 {
     min-height: 100vh;
 }
 
+/* The logo PNG is near-black on transparent; flip it so it reads on the dark theme. */
+:root[data-theme="dark"] .nav-logo {
+    filter: invert(1);
+}
+
 .sidebar {
     position: sticky;
     top: 0;

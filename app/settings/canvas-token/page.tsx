@@ -3,7 +3,7 @@
 // token field in Settings › Canvas scraper.
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Sidebar } from "@/components/shell/Sidebar";
+import { NavBar } from "@/components/shell/NavBar";
 import { ChevronIcon } from "@/components/shell/icons";
 import { scraperSetup } from "@/lib/scraper/runner";
 
@@ -30,7 +30,7 @@ export default function CanvasTokenPage() {
 
   return (
     <div className="app-shell">
-      <Sidebar active="settings" />
+      <NavBar active="settings" />
       <main className="main">
         <div className="max-w-reading space-y-6 p-8 md:p-10">
           <header className="px-2 pt-2">
