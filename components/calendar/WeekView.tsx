@@ -144,7 +144,8 @@ export function WeekView({ anchor, events, courseById, onSelect }: Props) {
                     }`}
                   >
                     <div className="truncate font-medium">{event.title}</div>
-                    <div className="text-xs opacity-75 truncate">{formatEventTime(event)}{event.location ? ` · ${event.location}` : ""}</div>
+                    <div className="text-xs opacity-75 truncate">{formatEventTime(event)}</div>
+                    {event.location && <div className="text-xs opacity-75 truncate">{event.location}</div>}
                   </button>
                 );
               })}

@@ -54,10 +54,12 @@ const MAP: Record<CourseColor, CourseTone> = {
 };
 
 const NEUTRAL: CourseTone = {
+  // Darker than --color-surface-muted (same cool grey hue) so events with no
+  // course still stand out from the page background.
   solid: "var(--color-text-muted)",
-  bg: "var(--color-surface-muted)",
-  border: "var(--color-border)",
-  fg: "var(--color-text-muted)",
+  bg: "#DCE4E4",
+  border: "#BAC5C5",
+  fg: "var(--color-text)",
 };
 
 export function courseTone(color?: CourseColor): CourseTone {
