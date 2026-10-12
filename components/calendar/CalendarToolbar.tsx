@@ -1,9 +1,16 @@
 "use client";
 
 import { useState } from "react";
+<<<<<<< HEAD
 import type { CalendarEventType, Course } from "@/types/calendar";
 import { courseTone } from "@/types/calendar";
 import { ChevronIcon } from "@/components/shell/icons";
+=======
+import type { ReactNode } from "react";
+import type { CalendarEventType, CalendarViewMode, Course } from "@/types/calendar";
+import { courseTone } from "@/lib/calendar/colors";
+import { ChevronIcon, KanbanIcon, MonthViewIcon, WeekViewIcon } from "@/components/shell/icons";
+>>>>>>> origin/main
 import { GenerateSubtasksButton } from "./GenerateSubtasksButton";
 
 interface Props {
@@ -11,6 +18,8 @@ interface Props {
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
+  view: CalendarViewMode;
+  onViewChange: (v: CalendarViewMode) => void;
   showNav: boolean;
   courses: Course[];
   hiddenCourses: Set<string>;
@@ -30,11 +39,17 @@ const SOURCES: { type: CalendarEventType; label: string; mark: "diamond" | "circ
   { type: "task", label: "Personal Calendar", mark: "circle" },
 ];
 
+const VIEWS: { key: CalendarViewMode; label: string; icon: ReactNode }[] = [
+  { key: "week", label: "Week", icon: <WeekViewIcon className="h-4 w-4" /> },
+  { key: "month", label: "Month", icon: <MonthViewIcon className="h-4 w-4" /> },
+  { key: "kanban", label: "Kanban", icon: <KanbanIcon className="h-4 w-4" /> },
+];
+
 export function CalendarToolbar(props: Props) {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   return (
-    <header className="flex flex-col gap-3 border-b border-border bg-background px-6 py-5">
+    <header className="flex flex-col gap-3 border-b border-border bg-background px-8 py-5 md:px-10">
       <div className="relative flex min-h-10 items-center justify-center">
         {props.showNav && (
           <div className="absolute left-0 flex items-center gap-1">
@@ -67,6 +82,27 @@ export function CalendarToolbar(props: Props) {
             <div className="text-sm text-text-muted">{props.period.subtitle}</div>
           )}
         </div>
+
+        <div className="absolute right-0 flex items-center gap-1" role="group" aria-label="Calendar view">
+          {VIEWS.map((v) => {
+            const current = props.view === v.key;
+            return (
+              <button
+                key={v.key}
+                onClick={() => props.onViewChange(v.key)}
+                aria-pressed={current}
+                className={`inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm font-medium transition-colors ${
+                  current
+                    ? "bg-primary-light/20 text-primary"
+                    : "text-text-muted hover:bg-surface-muted hover:text-text"
+                }`}
+              >
+                {v.icon}
+                {v.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -89,7 +125,7 @@ export function CalendarToolbar(props: Props) {
                     s.mark === "diamond" ? "rotate-45 rounded-sm" : ""
                   }`}
                   style={{
-                    background: active ? "#023047" : "#D9DFDF",
+                    background: active ? "var(--color-primary)" : "var(--color-border)",
                   }}
                 />
                 {s.label}
@@ -107,7 +143,7 @@ export function CalendarToolbar(props: Props) {
           >
             Courses
             {props.hiddenCourses.size > 0 && (
-              <span className="inline-flex min-h-[18px] items-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-white">
+              <span className="inline-flex min-h-[18px] items-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-on-primary">
                 {props.courses.length - props.hiddenCourses.size}/{props.courses.length}
               </span>
             )}

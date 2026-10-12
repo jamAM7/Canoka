@@ -20,7 +20,12 @@ import {
   layoutDayColumn,
   type ScheduledEvent,
 } from "@/lib/calendar/event-utils";
+<<<<<<< HEAD
 import { courseTone } from "@/types/calendar";
+=======
+import { courseTone } from "@/lib/calendar/colors";
+import { FlagIcon } from "@/components/shell/icons";
+>>>>>>> origin/main
 
 interface Props {
   anchor: Date;
@@ -91,11 +96,12 @@ export function WeekView({ anchor, events, courseById, onSelect }: Props) {
                   <button
                     key={ev.id}
                     onClick={() => onSelect(ev.id)}
-                    className="w-full truncate rounded-md px-2 py-1 text-sm"
+                    className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-sm"
                     style={{ background: tone.bg, color: tone.fg }}
                     title={`Due: ${ev.title}`}
                   >
-                    ⚑ {ev.title}
+                    <FlagIcon className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{ev.title}</span>
                   </button>
                 );
               })}
@@ -155,7 +161,8 @@ export function WeekView({ anchor, events, courseById, onSelect }: Props) {
                     className="absolute rounded-md border px-2 py-1 text-sm text-left overflow-hidden"
                   >
                     <div className="truncate font-medium">{event.title}</div>
-                    <div className="text-xs opacity-75 truncate">{formatEventTime(event)}{event.location ? ` · ${event.location}` : ""}</div>
+                    <div className="text-xs opacity-75 truncate">{formatEventTime(event)}</div>
+                    {event.location && <div className="text-xs opacity-75 truncate">{event.location}</div>}
                   </button>
                 );
               })}

@@ -1,5 +1,8 @@
 import type { Config } from "tailwindcss";
 
+/** A colour from styles/variables.css's --rgb-* triplets, with Tailwind's opacity. */
+const token = (name: string) => `rgb(var(--rgb-${name}) / <alpha-value>)`;
+
 const config: Config = {
   // Files Tailwind will scan for class names. Keep this list up-to-date when adding new folders or 
   // file types so unused styles are purged
@@ -14,6 +17,7 @@ const config: Config = {
   
   theme: {
     extend: {
+<<<<<<< HEAD
       // Color palette (semantic + brand). Prefer semantic names in components (primary, surface, border) so tokens can swap easily.
       colors: {
         primary: "#023047",
@@ -72,6 +76,50 @@ const config: Config = {
           "cyan-soft": "rgba(201, 203, 163, 0.52)",
           "cyan-border": "rgba(201, 203, 163, 0.9)",
         },
+=======
+      // Color palette (semantic + brand). Prefer semantic names in
+      // components (primary, surface, border) so tokens can swap easily.
+      // Values live in styles/variables.css, which switches them for dark
+      // mode and high contrast; `token()` keeps opacity modifiers working.
+      colors: {
+        primary: token("primary"),
+        "primary-light": token("primary-light"),
+        "primary-dark": token("primary-dark"),
+        // Text and icons on bg-primary or bg-error.
+        "on-primary": token("on-primary"),
+        secondary: token("secondary"),
+        "secondary-dark": token("secondary-dark"),
+        accent: token("accent"),
+        "accent-muted": token("accent-muted"),
+        success: token("success"),
+        warning: token("warning"),
+        error: token("error"),
+        info: token("info"),
+        text: token("text"),
+        "text-muted": token("text-muted"),
+        "text-light": token("text-light"),
+        background: token("background"),
+        surface: token("surface"),
+        "surface-muted": token("surface-muted"),
+        border: token("border"),
+        "border-light": token("border-light"),
+        // Calendar grid lines (week hours/days, month cells): darker than
+        // `border` so the grid stays readable on the `background` colour.
+        "border-strong": token("border-strong"),
+        white: token("white"),
+        black: token("black"),
+        brand: token("primary"),
+        brandSoft: token("primary-light"),
+        brandDeep: token("primary-dark"),
+        shell: token("background"),
+        panel: token("surface"),
+        panelMuted: token("surface-muted"),
+        ink: token("text"),
+        inkMuted: token("text-muted"),
+        inkLight: token("text-light"),
+        line: token("border"),
+        lineSoft: token("border-light"),
+>>>>>>> origin/main
       },
       spacing: {
         // Common spacing scale used across layouts and components. 
@@ -87,15 +135,23 @@ const config: Config = {
         12: "3rem",
         16: "4rem",
         20: "5rem",
-        sidebar: "240px",
+        sidebar: "200px",
         navbar: "72px",
       },
       fontFamily: {
+<<<<<<< HEAD
         // We use the Karla variable injected by next/font. 
         // Keep only Karla + a generic fallback to avoid unexpected font swaps.
         sans: ["var(--font-karla)", "Karla", "sans-serif"],
         body: ["var(--font-karla)", "Karla", "sans-serif"],
         heading: ["var(--font-karla)", "Karla", "sans-serif"],
+=======
+        // Fonts injected by next/font: Poppins for body text, Sintony
+        // for headings (h1–h6 pick it up from styles.css).
+        sans: ["var(--font-poppins)", "Poppins", "sans-serif"],
+        body: ["var(--font-poppins)", "Poppins", "sans-serif"],
+        heading: ["var(--font-sintony)", "Sintony", "sans-serif"],
+>>>>>>> origin/main
       },
       fontSize: {
         // Font-size scale (value + line-height). Use `text-sm`, `text-lg` etc.
@@ -134,7 +190,7 @@ const config: Config = {
         sm: "0 1px 2px rgba(2, 48, 71, 0.06)",
         md: "0 4px 12px rgba(2, 48, 71, 0.08)",
         lg: "0 10px 25px rgba(2, 48, 71, 0.12)",
-        focus: "0 0 0 3px rgba(142, 202, 230, 0.45)",
+        focus: "0 0 0 3px rgb(var(--rgb-primary-light) / 0.45)",
       },
       letterSpacing: {
         tight: "-0.02em",

@@ -7,7 +7,11 @@ import { courseTone } from "@/types/calendar";
 import { CURRENT_USER, getGreeting } from "@/lib/user/mock-user";
 =======
 import { courseTone } from "@/lib/calendar/colors";
+<<<<<<< HEAD
 import { getGreeting } from "@/lib/user/mock-user";
+>>>>>>> origin/main
+=======
+import { ClockIcon } from "@/components/shell/icons";
 >>>>>>> origin/main
 
 interface Props {
@@ -21,6 +25,10 @@ interface Props {
 // "due this week", and quick links into notes. Everything here serves one of
 // those — no stats, streaks, or widgets the README doesn't mention.
 const URGENT_WITHIN_HOURS = 48;
+
+// Sections sit on a fill one shade off the page background: no border or
+// shadow, so they read as soft areas rather than boxed cards.
+const PANEL = "rounded-xl bg-surface-muted/70 p-6";
 
 export function DashboardContent({ events, courses, userName }: Props) {
   const now = new Date();
@@ -49,16 +57,16 @@ export function DashboardContent({ events, courses, userName }: Props) {
 
   return (
     <div className="space-y-6 p-8 md:p-10">
-      <header className="px-2 pt-2">
+      <header className="px-2 pt-2 text-center">
         <h1 className="text-3xl font-bold tracking-tight text-text md:text-4xl">
-          {getGreeting(now)}, {userName}! 👋
+          {getGreeting(now)}, {userName}!
         </h1>
         <p className="mt-2 text-base text-text-muted">Here&apos;s what&apos;s on your plate today.</p>
       </header>
 
       <div className="space-y-6">
         <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-          <section className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+          <section className={PANEL}>
             <div className="mb-4 flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold text-text">Due this week</h2>
@@ -110,7 +118,7 @@ export function DashboardContent({ events, courses, userName }: Props) {
             )}
           </section>
 
-          <section className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+          <section className={PANEL}>
             <div className="mb-4">
               <h2 className="text-xl font-semibold text-text">Notifications</h2>
               <p className="mt-1 text-sm text-text-muted">Overdue or due within 48 hours.</p>
@@ -132,11 +140,11 @@ export function DashboardContent({ events, courses, userName }: Props) {
                     >
                       <span
                         className={`grid h-8 w-8 place-items-center rounded-full text-xs font-semibold ${
-                          overdue ? "bg-red-100 text-error" : "text-text"
+                          overdue ? "bg-error/15 text-error" : "text-text"
                         }`}
                         style={overdue ? undefined : { background: tone.bg, color: tone.fg }}
                       >
-                        {overdue ? "!" : "⏱️"}
+                        {overdue ? "!" : <ClockIcon className="h-4 w-4" />}
                       </span>
 
                       <div className="min-w-0 flex-1">
@@ -154,7 +162,7 @@ export function DashboardContent({ events, courses, userName }: Props) {
           </section>
         </div>
 
-        <section className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+        <section className={PANEL}>
           <div className="mb-4">
             <h2 className="text-xl font-semibold text-text">Your subjects</h2>
             <p className="mt-1 text-sm text-text-muted">Quick links into each subject&apos;s notes.</p>
@@ -189,4 +197,12 @@ export function DashboardContent({ events, courses, userName }: Props) {
       </div>
     </div>
   );
+}
+
+/** Time-of-day greeting, e.g. "Good morning". */
+function getGreeting(now: Date): string {
+  const hour = now.getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
 }

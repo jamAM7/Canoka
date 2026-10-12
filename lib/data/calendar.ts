@@ -17,7 +17,7 @@ import type { CalendarEvent, Course, CourseColor, TaskStatus } from "@/types/cal
 //   tasks       <- study_tasks in the student's study_plans (subtasks point
 //                  at their assignment through assignment_id)
 // Every query is scoped to the student here: the service role skips RLS.
-// There's no timetable table yet, so no "class" events come from here.
+// Classes come from the timetable subscription instead (lib/data/timetable).
 
 const COLORS: CourseColor[] = ["blue", "violet", "emerald", "amber", "rose", "cyan"];
 /** A task with a date but no start time is booked for this hour, in the student's timezone. */
@@ -185,11 +185,11 @@ function taskStatus(status: StudyTaskStatus): TaskStatus {
   }
 }
 
-/** `date` ("YYYY-MM-DD") at `hour`:00 in `timezone`, as an ISO instant. */
-function zonedIso(date: string, hour: number, timezone: string): string | null {
+/** `date` ("YYYY-MM-DD") at `hour`:`minute` in `timezone`, as an ISO instant. */
+export function zonedIso(date: string, hour: number, timezone: string, minute = 0): string | null {
   const [y, m, d] = date.split("-").map(Number);
   if (!y || !m || !d) return null;
-  const guess = Date.UTC(y, m - 1, d, hour);
+  const guess = Date.UTC(y, m - 1, d, hour, minute);
   // The zone's offset at that moment: format the instant there, read it back as UTC.
   let parts: Record<string, string>;
   try {

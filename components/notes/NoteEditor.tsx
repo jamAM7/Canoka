@@ -141,7 +141,7 @@ export function NoteEditor({ note, onChange, onDelete }: Props) {
             <button
               type="button"
               onClick={onDelete}
-              className="rounded-md bg-error px-3 py-1.5 text-sm font-medium text-white hover:bg-error/90"
+              className="rounded-md bg-error px-3 py-1.5 text-sm font-medium text-on-primary hover:bg-error/90"
             >
               Delete
             </button>
