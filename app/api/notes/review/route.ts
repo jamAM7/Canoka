@@ -1,6 +1,6 @@
 // AI review of a student's notes for one week of a subject.
 //
-//   POST /api/notes/review  { courseId, week, refresh? }
+//   POST /api/notes/review  { courseId, week, refresh?, learningProfile? }
 //     Does everything in order: fetches the week from Canvas and saves it as
 //     course_content, reads the week's notes (plain_text) and content from the
 //     database, has Claude compare them, stores the result in week_reviews and

@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import type { CourseContentRow, CourseRow, NoteRow, WeekReviewRow } from "@/lib/supabase/types";
 import { docText } from "@/lib/notes/text";
 import type { WeekReviewDto } from "@/lib/notes/types";
+import type { LearningProfile } from "@/lib/user/learning-profile";
 import { canvasClientFor } from "./canvas-connection";
 import { dbError } from "./db-error";
 import { NotesError, isUuid } from "./notes";
@@ -43,6 +44,7 @@ export interface WeekRef {
 export interface ReviewInput extends WeekRef {
   /** Accepted for older clients. Nothing is cached any more: every review asks Canvas. */
   refresh: boolean;
+  learningProfile: LearningProfile | null;
 }
 
 export interface ReviewOutcome {
@@ -64,7 +66,28 @@ export function parseReviewInput(body: unknown): ReviewInput {
   const raw = (body ?? {}) as Record<string, unknown>;
   // A JSON body says what type it means: the week is a number. (A query string can only say "3".)
   if (typeof raw.week !== "number") throw new NotesError(`Choose a week from 1 to ${MAX_WEEK}.`, 400);
-  return { ...parseWeekRef(raw.courseId, raw.week), refresh: raw.refresh === true };
+  return {
+    ...parseWeekRef(raw.courseId, raw.week),
+    refresh: raw.refresh === true,
+    learningProfile: parseLearningProfile(raw.learningProfile),
+  };
+}
+
+function parseLearningProfile(value: unknown): LearningProfile | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const profile = value as Record<string, unknown>;
+  const oneOf = (candidate: unknown, allowed: string[]) =>
+    typeof candidate === "string" && allowed.includes(candidate) ? candidate : null;
+  const allowedModes = new Set(["examples", "visual", "explanations", "practice"]);
+  return {
+    studyLevel: oneOf(profile.studyLevel, ["high-school", "undergraduate", "postgraduate", "other"]),
+    studyGoal: oneOf(profile.studyGoal, ["understand", "exams", "assignments", "keep-up"]),
+    learningModes: (Array.isArray(profile.learningModes) ? profile.learningModes : [])
+      .filter((mode): mode is string => typeof mode === "string" && allowedModes.has(mode))
+      .slice(0, 4),
+    noteDepth: oneOf(profile.noteDepth, ["concise", "balanced", "detailed"]),
+    supportStyle: oneOf(profile.supportStyle, ["guided", "questions", "direct"]),
+  };
 }
 
 // One review per student and week at a time: they take a while, and a second click shouldn't pay for another.
@@ -112,6 +135,7 @@ export async function reviewWeek(user: Pick<CurrentUser, "id" | "timezone">, inp
       weekTitle: group.title,
       weekContent: content.markdown,
       notes,
+      learningProfile: input.learningProfile,
     });
     const saved = await saveReview(userId, {
       courseId,

@@ -4,17 +4,16 @@ import type { Config } from "tailwindcss";
 const token = (name: string) => `rgb(var(--rgb-${name}) / <alpha-value>)`;
 
 const config: Config = {
-  // Files Tailwind will scan for class names. Keep this list up-to-date when adding new folders or 
+  // Files Tailwind will scan for class names. Keep this list up-to-date when adding new folders or
   // file types so unused styles are purged
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./styles/**/*.css",
   ],
-  
-  // Centralised design tokens. These values are referenced throughout the app via Tailwind utilities 
+  // Centralised design tokens. These values are referenced throughout the app via Tailwind utilities
   // (e.g. `text-primary`, `bg-surface`, `p-4`). Update here to keep styling consistent across components
-  
+
   theme: {
     extend: {
       // Color palette (semantic + brand). Prefer semantic names in components
@@ -81,7 +80,7 @@ const config: Config = {
         },
       },
       spacing: {
-        // Common spacing scale used across layouts and components. 
+        // Common spacing scale used across layouts and components.
         // Add descriptive tokens (e.g. `sidebar`, `navbar`) for fixed dimensions
         1: "0.25rem",
         2: "0.5rem",

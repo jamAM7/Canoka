@@ -1,5 +1,28 @@
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { supabaseConfig } from "./config";
+
 import "server-only";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
+
+export function createClient() {
+  const config = supabaseConfig();
+  if (!config) throw new Error("Supabase is not configured.");
+  const cookieStore = cookies();
+
+  return createServerClient(config.url, config.key, {
+    cookies: {
+      getAll: () => cookieStore.getAll(),
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+        } catch {
+          // Server Components cannot write cookies; middleware refreshes them.
+        }
+      },
+    },
+  });
+}
 
 // The Supabase client for server code: route handlers and server components.
 // It uses the service role key, which bypasses row level security, so it must
@@ -26,7 +49,7 @@ export function supabaseAdmin(): SupabaseClient {
       "Set SUPABASE_SERVICE_ROLE_KEY in .env.local (Supabase project → Settings → API, the service_role key).",
     );
   }
-  client = createClient(url, key, {
+  client = createSupabaseClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     // Next caches server-side fetches by default; database reads must always be fresh.
     global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) },

@@ -7,6 +7,7 @@ import { reviewKey, toSavedReview, type Note, type SavedReview } from "@/lib/not
 import { ChevronIcon, PanelIcon, PlusIcon, SparkleIcon } from "@/components/shell/icons";
 import { NoteEditor } from "./NoteEditor";
 import { WeekReview } from "./WeekReview";
+import { loadLearningProfile } from "@/lib/user/learning-profile";
 
 interface Props {
   subjects: NotesSubject[];
@@ -256,7 +257,7 @@ export function NotesContent({ subjects, initialNotes }: Props) {
       const res = await fetch("/api/notes/review", {
         method: "POST",
         headers: JSON_HEADERS,
-        body: JSON.stringify({ courseId: subjectId, week }),
+        body: JSON.stringify({ courseId: subjectId, week, learningProfile: await loadLearningProfile().catch(() => null) }),
       });
       const data = await res.json();
       if (!res.ok) {

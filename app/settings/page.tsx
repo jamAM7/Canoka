@@ -2,6 +2,7 @@
 // TODO: notification preferences.
 import { NavBar } from "@/components/shell/NavBar";
 import { AiSettings } from "@/components/settings/AiSettings";
+import { AccountSettings } from "@/components/settings/AccountSettings";
 import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
 import { CanvasSettings } from "@/components/settings/CanvasSettings";
 import { ScraperSettings } from "@/components/settings/ScraperSettings";
@@ -51,6 +52,7 @@ export default async function SettingsPage() {
           )}
           <TimetableSettings subscribed={subscribed} />
           <AiSettings hasKey={anthropicKey() !== null} hosted={!local} />
+          <AccountSettings />
           <AppearanceSettings />
         </div>
       </main>
