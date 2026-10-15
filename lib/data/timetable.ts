@@ -1,17 +1,18 @@
 import "server-only";
-import path from "node:path";
-import { readEnvFile, writeEnvFile } from "@/lib/env-file";
 import { parseIcs, type IcsEvent, type IcsTime } from "@/lib/calendar/ical";
 import { zonedIso } from "@/lib/data/calendar";
+import { supabaseAdmin } from "@/lib/supabase/server";
+import type { UserRow } from "@/lib/supabase/types";
 import type { CalendarEvent, Course } from "@/types/calendar";
+import { dbError } from "./db-error";
+import { NotesError } from "./notes";
 
 // The student's classes, from the iCal subscription link UTS My Timetable
-// gives. The link is TIMETABLE_ICAL_URL: saved from Settings into .env.local,
-// or set in the environment (on a host, say). The feed is fetched when the
-// calendar loads and kept for a few minutes, so timetable changes come through
-// on their own.
+// gives. The link is users.timetable_ical_url, saved from Settings, or
+// TIMETABLE_ICAL_URL in the environment until the student saves one. The feed
+// is fetched when the calendar loads and kept for a few minutes, so timetable
+// changes come through on their own.
 
-const ENV_FILE = path.join(process.cwd(), ".env.local");
 const KEY = "TIMETABLE_ICAL_URL";
 const FRESH_MS = 10 * 60_000;
 const TIMEOUT_MS = 15_000;
@@ -20,33 +21,47 @@ const DEFAULT_CLASS_MINUTES = 60;
 
 let cached: { url: string; at: number; events: IcsEvent[] } | null = null;
 
-/** The subscription link. .env.local wins once Settings has written it, so unsubscribing sticks. */
-export function timetableUrl(): string | null {
-  const file = readEnvFile(ENV_FILE);
-  if (KEY in file) return file[KEY] || null;
+/**
+ * The subscription link. A saved one wins over the environment's, and
+ * unsubscribing saves "" rather than null, so the environment's can't come back.
+ */
+export async function timetableUrl(userId: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin()
+    .from("users")
+    .select("timetable_ical_url")
+    .eq("id", userId)
+    .overrideTypes<Pick<UserRow, "timetable_ical_url">[], { merge: false }>();
+  if (error) throw dbError("Couldn't load your timetable link", error);
+  const saved = data[0]?.timetable_ical_url;
+  if (saved != null) return saved || null;
   return process.env[KEY]?.trim() || null;
 }
 
 /** Subscribes to { url } from the Settings page, once it returns a calendar. Returns how many classes it has. */
-export async function saveTimetableUrl(input: unknown): Promise<number> {
+export async function saveTimetableUrl(userId: string, input: unknown): Promise<number> {
   const raw = (input as { url?: unknown } | null)?.url;
   const url = normalise(typeof raw === "string" ? raw : "");
-  if (!url) throw new Error("That doesn't look like a calendar link. It should start with https:// or webcal://.");
+  if (!url) throw new NotesError("That doesn't look like a calendar link. It should start with https:// or webcal://.", 400);
 
   let events: IcsEvent[];
   try {
     events = await fetchFeed(url);
   } catch (error) {
-    throw new Error(`Couldn't read that link: ${error instanceof Error ? error.message : String(error)}.`);
+    throw new NotesError(`Couldn't read that link: ${error instanceof Error ? error.message : String(error)}.`, 400);
   }
-  writeEnvFile(ENV_FILE, { [KEY]: url }, "Canoka's settings for this computer. Never commit this file.");
+  await saveUrl(userId, url);
   cached = { url, at: Date.now(), events };
   return events.length;
 }
 
-export function removeTimetableUrl(): void {
-  writeEnvFile(ENV_FILE, { [KEY]: "" }, "Canoka's settings for this computer. Never commit this file.");
+export async function removeTimetableUrl(userId: string): Promise<void> {
+  await saveUrl(userId, "");
   cached = null;
+}
+
+async function saveUrl(userId: string, url: string) {
+  const { error } = await supabaseAdmin().from("users").update({ timetable_ical_url: url }).eq("id", userId);
+  if (error) throw dbError("Couldn't save your timetable link", error);
 }
 
 /**
@@ -55,12 +70,13 @@ export function removeTimetableUrl(): void {
  * classes and an `error` to show, rather than failing the whole calendar.
  */
 export async function getTimetableEvents(
+  userId: string,
   courses: Course[],
   timezone: string,
 ): Promise<{ events: CalendarEvent[]; error?: string }> {
-  const url = timetableUrl();
-  if (!url) return { events: [] };
   try {
+    const url = await timetableUrl(userId);
+    if (!url) return { events: [] };
     if (!cached || cached.url !== url || Date.now() - cached.at > FRESH_MS) {
       cached = { url, at: Date.now(), events: await fetchFeed(url) };
     }

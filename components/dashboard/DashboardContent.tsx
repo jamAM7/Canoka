@@ -161,8 +161,8 @@ export function DashboardContent({ events, courses, userName }: Props) {
 
           {courses.length === 0 && (
             <p className="py-4 text-sm text-text-muted">
-              No subjects yet. Run the Canvas scraper from{" "}
-              <Link href="/settings" className="font-medium text-primary hover:underline">
+              No subjects yet. Connect Canvas and sync your subjects in{" "}
+              <Link href="/settings#canvas" className="font-medium text-primary hover:underline">
                 Settings
               </Link>
               , then reload this page.

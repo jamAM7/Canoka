@@ -24,6 +24,8 @@ export interface UserRow {
   email: string;
   full_name: string | null;
   timezone: string;
+  /** UTS My Timetable's iCal link, saved from Settings. "" once unsubscribed. */
+  timetable_ical_url: string | null;
   created_at: string;
   updated_at: string;
 }

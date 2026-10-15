@@ -3,19 +3,38 @@
 import { NavBar } from "@/components/shell/NavBar";
 import { AiSettings } from "@/components/settings/AiSettings";
 import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
+import { CanvasSettings } from "@/components/settings/CanvasSettings";
 import { ScraperSettings } from "@/components/settings/ScraperSettings";
 import { TimetableSettings } from "@/components/settings/TimetableSettings";
 import { anthropicKey } from "@/lib/ai/key";
+import { canvasConnection, type CanvasConnection } from "@/lib/data/canvas-connection";
 import { timetableUrl } from "@/lib/data/timetable";
+import { currentUser } from "@/lib/data/user";
 import { scrapeProgress, scraperSetup } from "@/lib/scraper/runner";
 import { lastScrape } from "@/lib/scraper/subjects";
 
 export const metadata = { title: "Settings · Canoka" };
 
-// The scraper's setup, last scrape, any running scrape, the AI key and the timetable link are read on every request.
+// The Canvas connection, the timetable link, the AI key and, locally, the scraper's state are read on every request.
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
+  // The local scraper runs Python, which the hosted site doesn't have.
+  const local = process.env.NODE_ENV !== "production";
+
+  let connection: CanvasConnection | null = null;
+  let subscribed = false;
+  let problem: string | null = null;
+  try {
+    const user = await currentUser();
+    [connection, subscribed] = await Promise.all([
+      canvasConnection(user.id),
+      timetableUrl(user.id).then((url) => url !== null),
+    ]);
+  } catch (error) {
+    problem = error instanceof Error ? error.message : String(error);
+  }
+
   return (
     <div className="app-shell">
       <NavBar active="settings" />
@@ -26,9 +45,12 @@ export default async function SettingsPage() {
             <p className="mt-1 text-sm text-text-muted">Connect Canvas, your timetable and AI, pull your subjects in, and set how Canoka looks.</p>
           </header>
 
-          <ScraperSettings setup={scraperSetup()} lastScrape={await lastScrape()} progress={scrapeProgress()} />
-          <TimetableSettings subscribed={timetableUrl() !== null} />
-          <AiSettings hasKey={anthropicKey() !== null} />
+          <CanvasSettings connection={connection} problem={problem} />
+          {local && (
+            <ScraperSettings setup={scraperSetup(connection)} lastScrape={await lastScrape()} progress={scrapeProgress()} />
+          )}
+          <TimetableSettings subscribed={subscribed} />
+          <AiSettings hasKey={anthropicKey() !== null} hosted={!local} />
           <AppearanceSettings />
         </div>
       </main>

@@ -1,34 +1,35 @@
 import "server-only";
 import { reviewNotes, type NotesReview } from "@/lib/ai/review";
+import { COVERAGE_PREFIX, weekItems } from "@/lib/canvas/week";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type { CourseContentRow, CourseRow, NoteRow, WeekReviewRow } from "@/lib/supabase/types";
 import { docText } from "@/lib/notes/text";
 import type { WeekReviewDto } from "@/lib/notes/types";
+import { canvasClientFor } from "./canvas-connection";
 import { dbError } from "./db-error";
 import { NotesError, isUuid } from "./notes";
+import type { CurrentUser } from "./user";
+import { saveWeekContent } from "./week-content";
 import { weekModuleIds, weekModules } from "./week-modules";
 
 // The AI review of a student's notes for one week of a subject.
 //
 //   1. check the request and the week's notes (cheap, before anything slow)
-//   2. scrape the week from Canvas and save it as course_content (development
-//      only: in production the Python scraper can't run, so the content already
-//      stored is used, and it's an error if there is none)
+//   2. fetch the week from Canvas (lib/canvas/week), signed in with the
+//      student's saved connection, and save it as course_content
 //   3. read the week's notes and content back from the database
 //   4. have Claude compare them, and save the result in week_reviews
 //
 // A week is read by (course_id, week_number), through every module for the
 // week (lib/data/week-modules), so a leftover duplicate module can't hide half
-// of it. If step 2 fails the review still runs on whatever course_content is
-// already stored, and says so (`contentStale`).
+// of it. If step 2 fails, or Canvas isn't connected, the review still runs on
+// whatever course_content is already stored, and says so (`contentStale`).
 
 const MAX_WEEK = 20;
 const MAX_NOTES = 50;
 const MAX_NOTE_CHARS = 200_000;
 /** Characters of course content sent: well under the model's limit, past any real week. */
 const MAX_CONTENT_CHARS = 150_000;
-/** external_content_id of the synthetic row scraper/week_rows.py writes to say what Canvas didn't give us. */
-const COVERAGE_PREFIX = "canoka:coverage:";
 
 const REVIEW_COLUMNS =
   "id, user_id, course_id, module_id, content, model_name, note_count, had_course_content, content_stale, content_updated_at, created_at";
@@ -40,7 +41,7 @@ export interface WeekRef {
 }
 
 export interface ReviewInput extends WeekRef {
-  /** Ask Canvas again instead of using what the scraper cached (pages and modules last a week). */
+  /** Accepted for older clients. Nothing is cached any more: every review asks Canvas. */
   refresh: boolean;
 }
 
@@ -70,8 +71,9 @@ export function parseReviewInput(body: unknown): ReviewInput {
 const store = globalThis as typeof globalThis & { canokaReviewing?: Set<string> };
 const reviewing = (store.canokaReviewing ??= new Set<string>());
 
-export async function reviewWeek(userId: string, input: ReviewInput): Promise<ReviewOutcome> {
+export async function reviewWeek(user: Pick<CurrentUser, "id" | "timezone">, input: ReviewInput): Promise<ReviewOutcome> {
   const { courseId, week } = input;
+  const userId = user.id;
   const course = await ownCourse(userId, courseId);
 
   const group = await weekModules(courseId, week);
@@ -87,28 +89,21 @@ export async function reviewWeek(userId: string, input: ReviewInput): Promise<Re
   try {
     // Step 2. If Canvas or the save fails, review against what's already stored.
     let staleReason: string | null = null;
-    if (process.env.NODE_ENV === "production") {
-      // No Python on the hosted site. week-sync is imported only below, so its
-      // child_process and fs imports never load here.
-      staleReason = "Using previously synced Canvas content (live scraping isn't available on the hosted site).";
-    } else {
-      try {
-        const { saveWeekContent, scrapeWeek } = await import("./week-sync");
-        await saveWeekContent(courseId, group.canonical.id, await scrapeWeek(course.external_course_id, week, input.refresh));
-      } catch (error) {
-        staleReason = error instanceof Error ? error.message : String(error);
-        console.error(`Week scrape failed for course ${course.external_course_id}, week ${week}: ${staleReason}`);
+    try {
+      const client = await canvasClientFor(userId);
+      if (client) {
+        const items = await weekItems(client, course.external_course_id, week, user.timezone);
+        await saveWeekContent(courseId, group.canonical.id, items);
+      } else {
+        staleReason = "Canvas isn't connected, so this used the content saved earlier. Connect it in Settings.";
       }
+    } catch (error) {
+      staleReason = error instanceof Error ? error.message : String(error);
+      console.error(`Week fetch failed for course ${course.external_course_id}, week ${week}: ${staleReason}`);
     }
 
     // Step 3.
     const content = await storedContent(courseId, moduleIds);
-    if (process.env.NODE_ENV === "production" && content.markdown === null) {
-      throw new NotesError(
-        "This week's course content hasn't been synced yet, so it can't be reviewed here. The subject needs syncing first.",
-        404,
-      );
-    }
 
     // Step 4.
     const { review, model } = await reviewNotes({

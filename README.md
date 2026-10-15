@@ -23,7 +23,7 @@ Canoka pulls course content and deadlines from Canvas, turns them into organised
 | Framework | **Next.js 14** (App Router, TypeScript) |
 | Styling | Tailwind CSS |
 | Database + Auth | **Supabase** (Postgres, Auth, Row Level Security, Storage) |
-| Hosting | Vercel (app) + Supabase (managed Postgres) |
+| Hosting | Netlify (app) + Supabase (managed Postgres) |
 | AI | Pluggable via `lib/ai` — used for note generation |
 | Canvas integration | Canvas LMS REST API via `lib/canvas` |
 
@@ -83,7 +83,7 @@ when a requirements file has changed, so pulling a teammate's new dependency
 needs nothing extra.
 
 Neither command ever fails because of Python: they warn and carry on, since
-only the scraper needs it.
+only the local scraper needs it.
 
 - **No Python found.** Install Python 3.9 or later and run `npm run setup:python`.
 - **On Debian or Ubuntu,** also run `sudo apt install python3-venv` first.
@@ -95,7 +95,7 @@ only the scraper needs it.
 
 `npm run setup:python` reinstalls everything and exits non-zero if anything is
 missing. Set `SKIP_PYTHON_SETUP=1` to turn off the automatic check. It never
-runs in CI or on Vercel, where the scraper is off anyway.
+runs in CI, Netlify's builds included, where the scraper is off anyway.
 
 To add a Python dependency, add it to the relevant `requirements.txt` and
 commit. Everyone else gets it the next time they run `npm run dev`. The
@@ -109,16 +109,46 @@ installs on Windows, macOS and Linux.
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project → Settings → API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project → Settings → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase project → Settings → API (server-only, never expose client-side) |
-| `CANVAS_BASE_URL` | Your institution's Canvas URL, e.g. `https://canvas.uts.edu.au` |
-| `CANVAS_API_TOKEN` | Canvas → Account → Settings → New Access Token |
-| `AI_API_KEY` | Your AI provider's API key |
-| `TIMETABLE_ICAL_URL` | Optional. UTS My Timetable's iCal subscription link, for classes on the calendar. Easiest set from Settings → Timetable |
+| `SUPABASE_USER_ID` | The shared dev user's `public.users.id` (ask the team). Stands in for sign-in until Supabase Auth is wired up |
+| `ANTHROPIC_API_KEY` | console.anthropic.com. Locally you can save it from Settings → AI instead |
+| `TIMETABLE_ICAL_URL` | Optional fallback. Students save their UTS My Timetable link from Settings → Timetable |
+
+There's no Canvas variable: each student saves their Canvas address and access
+token from Settings → Canvas, and it's kept in Supabase (see below).
+
+## Canvas sync and hosting
+
+The app reads Canvas itself, in TypeScript, so it works the same locally and on
+the hosted site (Netlify, which can't run Python):
+
+- **Settings → Canvas** saves the student's Canvas address and access token in
+  `canvas_connections`, after checking the token with Canvas.
+- **Sync subjects** (`POST /api/canvas/sync`) pulls this session's subjects,
+  their modules and weeks, and their assessments into Supabase
+  (`lib/canvas/subject.ts`, then `lib/data/subject-sync.ts`). That's a few
+  requests per subject.
+- **AI review of a week** fetches just that week from Canvas
+  (`lib/canvas/week.ts`) and saves it as `course_content` before reviewing.
+
+This needs the migration `supabase/migrations/20261016120000_canvas_connections.sql`.
+Apply it in the Supabase SQL editor. On Netlify, set the same Supabase
+variables, `SUPABASE_USER_ID` and `ANTHROPIC_API_KEY` as above; nothing
+Canvas-specific is needed.
+
+The token is stored as-is in a table with row level security on and no
+policies, so only the app's server code can read it. Anyone with access to the
+Supabase dashboard can still see it. There's no sign-in yet, so anyone who
+opens the hosted site uses the shared dev user's connection. They can't read
+the token, but they can sync or replace it.
 
 ## Canvas scraper
 
 Pulls a student's Canvas subjects into a local corpus: one JSON document per
 subject for code to query, plus the markdown views you actually put in a
-prompt.
+prompt. The app doesn't read this corpus (it syncs from Canvas itself, above).
+It's for the scripts in `llm/`, and runs only on your machine: from the
+command line, or from Settings → Local scraper while running `npm run dev`,
+where it signs in with the Canvas connection saved in Settings.
 
 ```
 scraper/out/
@@ -134,7 +164,7 @@ A whole subject is roughly 100k tokens of JSON. The module view for the week
 being asked about is roughly 1k. Only the second belongs in a request.
 
 ```bash
-cp scraper/.env.example scraper/.env    # add CANVAS_BASE_URL and CANVAS_API_TOKEN
+cp scraper/.env.example scraper/.env    # add CANVAS_BASE_URL and CANVAS_TOKEN
 
 cd scraper
 ../.venv/bin/python scrape.py                       # JSON + markdown views

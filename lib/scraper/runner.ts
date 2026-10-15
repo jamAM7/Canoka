@@ -11,10 +11,12 @@ import {
   type ScrapeRun,
   type ScraperSetup,
 } from "./cli";
-import { readCanvasEnv } from "./env";
 
 // Runs scraper/scrape.py on this machine for the Settings page, one scrape at
-// a time, and keeps its output so the page can follow along. Server-only.
+// a time, and keeps its output so the page can follow along. It signs in with
+// the Canvas connection saved in Settings, passed in its environment, which
+// scrape.py prefers to scraper/.env. Server-only, and local only: the hosted
+// site has no Python.
 
 export const SCRAPER_DIR = path.join(process.cwd(), "scraper");
 // The virtualenv scripts/setup-python.mjs creates at the repo root.
@@ -38,7 +40,8 @@ const store = globalThis as typeof globalThis & { canokaScrape?: Run };
 
 export class ScrapeBusyError extends Error {}
 
-export function startScrape(options: ScrapeOptions): void {
+/** `signIn` is the saved Canvas connection; without one, scrape.py reads scraper/.env. */
+export function startScrape(options: ScrapeOptions, signIn: { baseUrl: string; token: string } | null): void {
   const previous = store.canokaScrape;
   if (previous?.status === "running") throw new ScrapeBusyError("A scrape is already running.");
   if (!existsSync(PYTHON)) {
@@ -49,8 +52,13 @@ export function startScrape(options: ScrapeOptions): void {
 
   const child = spawn(PYTHON, ["scrape.py", ...scrapeArgs(options)], {
     cwd: SCRAPER_DIR,
-    // Unbuffered, so output arrives as it's printed rather than when the pipe fills.
-    env: { ...process.env, PYTHONUNBUFFERED: "1", PYTHONIOENCODING: "utf-8" },
+    env: {
+      ...process.env,
+      ...(signIn && { CANVAS_BASE_URL: signIn.baseUrl, CANVAS_TOKEN: signIn.token }),
+      // Unbuffered, so output arrives as it's printed rather than when the pipe fills.
+      PYTHONUNBUFFERED: "1",
+      PYTHONIOENCODING: "utf-8",
+    },
   });
   const run: Run = {
     id: (previous?.id ?? 0) + 1,
@@ -106,15 +114,13 @@ export function scrapeProgress(runId?: number, since = 0): ScrapeProgress {
   };
 }
 
-/** What the scraper needs on this machine, read the way scrape.py reads it. */
-export function scraperSetup(): ScraperSetup {
-  const file = readCanvasEnv();
-  // As in scrape.py, the process environment wins over scraper/.env.
+/** What the scraper needs on this machine. `connection` is the Canvas connection saved in Settings. */
+export function scraperSetup(connection: { baseUrl: string } | null): ScraperSetup {
   return {
     enabled: process.env.NODE_ENV !== "production",
     python: existsSync(PYTHON),
-    canvasUrl: process.env.CANVAS_BASE_URL || file.CANVAS_BASE_URL || null,
-    token: Boolean(process.env.CANVAS_TOKEN || file.CANVAS_TOKEN),
+    canvasUrl: connection?.baseUrl ?? null,
+    token: connection !== null,
   };
 }
 

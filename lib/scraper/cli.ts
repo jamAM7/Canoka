@@ -149,7 +149,8 @@ export interface ScraperSetup {
   /** Off in production: scraping runs a process on the server. */
   enabled: boolean;
   python: boolean;
-  /** CANVAS_BASE_URL, e.g. https://canvas.uts.edu.au. */
+  /** The Canvas address saved in Settings, e.g. https://canvas.uts.edu.au. */
   canvasUrl: string | null;
+  /** Whether Settings has a Canvas token saved. */
   token: boolean;
 }

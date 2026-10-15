@@ -1,60 +1,20 @@
 import "server-only";
-import { execFile } from "node:child_process";
-import { existsSync } from "node:fs";
-import { promisify } from "node:util";
-import { PYTHON, SCRAPER_DIR } from "@/lib/scraper/runner";
+import type { SubjectRows } from "@/lib/canvas/subject";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { dbError } from "./db-error";
 
-// Puts a scraped subject in the database so the app can list it by week:
+// Puts a Canvas subject in the database so the app can list it by week:
 // the institution, the course, the student's enrolment, every module (the
 // Canvas ones, and a synthetic module for each teaching week Canvas has no
-// module named for, see lib/notes/weeks and scraper/week_rows.py), and the
+// module named for, see lib/notes/weeks and lib/canvas/subject), and the
 // assessments. It writes no course_content:
 // the AI review does that for the week it reviews.
 //
 // Every write is an upsert on the table's unique key, so syncing a subject
-// twice changes nothing. Subjects are read from the scraper's last scrape on
-// disk (scraper/week_rows.py), not from Canvas.
+// twice changes nothing. The rows come from Canvas through lib/canvas/subject.
 
-const run = promisify(execFile);
 /** Rows per request, to stay well inside PostgREST's limits. */
 const CHUNK = 200;
-
-interface SubjectRows {
-  course: {
-    external_course_id: string;
-    course_code: string | null;
-    name: string;
-    term_name: string | null;
-    start_date: string | null;
-    end_date: string | null;
-  };
-  canvas_host: string | null;
-  modules: {
-    external_module_id: string;
-    name: string;
-    position: number | null;
-    unlock_at: string | null;
-    published: boolean;
-  }[];
-  modules_without_id: number;
-  /** Placeholders for the weeks no Canvas module is named for. */
-  weeks: { number: number; external_module_id: string; name: string }[];
-  /** Teaching weeks in all, with or without a Canvas module. */
-  week_count: number;
-  assessments: {
-    external_assignment_id: string;
-    name: string;
-    description: string | null;
-    due_at: string | null;
-    available_from: string | null;
-    available_until: string | null;
-    points_possible: number | null;
-    assignment_group: string | null;
-    weight: number | null;
-  }[];
-}
 
 export interface SyncedSubject {
   /** courses.id */
@@ -70,33 +30,13 @@ export interface SyncedSubject {
   warnings: string[];
 }
 
-/** A subject (code or Canvas course id) from the last scrape, as database rows. */
-export async function loadSubjectRows(subject: string): Promise<SubjectRows> {
-  if (!existsSync(PYTHON)) {
-    throw new Error("There's no Python virtualenv at .venv. Set it up as the README describes.");
-  }
-  try {
-    const { stdout } = await run(PYTHON, ["week_rows.py", "subject", subject], {
-      cwd: SCRAPER_DIR,
-      env: { ...process.env, PYTHONIOENCODING: "utf-8" },
-      timeout: 30_000,
-      maxBuffer: 50 * 1024 * 1024,
-    });
-    return JSON.parse(stdout) as SubjectRows;
-  } catch (error) {
-    // week_rows.py says what went wrong on stderr, e.g. a subject missing from the last scrape.
-    const stderr = (error as { stderr?: string }).stderr?.trim();
-    throw new Error(stderr || (error instanceof Error ? error.message : String(error)));
-  }
-}
-
 export async function syncSubject(userId: string, rows: SubjectRows): Promise<SyncedSubject> {
   const db = supabaseAdmin();
   const { course } = rows;
 
   const institutionId = await institutionFor(rows.canvas_host);
 
-  // Columns the scrape has no value for are left out, so a re-sync never blanks what's already there.
+  // Columns Canvas has no value for are left out, so a re-sync never blanks what's already there.
   const courseRow: Record<string, unknown> = {
     institution_id: institutionId,
     lms_provider: "canvas",
@@ -137,13 +77,6 @@ export async function syncSubject(userId: string, rows: SubjectRows): Promise<Sy
   const assignmentRows = rows.assessments.map((a) => ({ ...a, course_id: courseId }));
   await upsertAll("assignments", assignmentRows, "course_id,external_assignment_id", "Couldn't save the assessments");
 
-  const warnings: string[] = [];
-  if (rows.modules_without_id > 0) {
-    warnings.push(
-      `${rows.modules_without_id} Canvas module${rows.modules_without_id === 1 ? "" : "s"} skipped: the last scrape ` +
-        "didn't record module ids. Scrape again to include them. The subject's weeks are saved either way.",
-    );
-  }
   return {
     courseId,
     externalCourseId: course.external_course_id,
@@ -152,7 +85,7 @@ export async function syncSubject(userId: string, rows: SubjectRows): Promise<Sy
     weeks: rows.week_count,
     modules: rows.modules.length,
     assignments: rows.assessments.length,
-    warnings,
+    warnings: [],
   };
 }
 
@@ -169,7 +102,7 @@ export function canvasOrigin(host: string | null | undefined): string | null {
 /** The institution for a Canvas site, which is created if it isn't there. */
 async function institutionFor(host: string | null): Promise<string> {
   const origin = canvasOrigin(host) ?? canvasOrigin(process.env.CANVAS_BASE_URL);
-  if (!origin) throw new Error("The last scrape doesn't say which Canvas it ran against. Scrape again.");
+  if (!origin) throw new Error("The sync doesn't say which Canvas it read. Save your Canvas address in Settings.");
 
   const db = supabaseAdmin();
   const { data: all, error } = await db

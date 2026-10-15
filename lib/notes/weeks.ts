@@ -1,5 +1,5 @@
 // How weeks are stored. A week is a course_modules row. Canvas modules aren't
-// always weeks (see scraper/week_rows.py), so a week Canvas has no module named
+// always weeks (see lib/canvas/subject.ts), so a week Canvas has no module named
 // "Week N" for gets a SYNTHETIC module: made up by the app, absent from Canvas,
 // with external_module_id "canoka:week:N" and name "Week N".
 //

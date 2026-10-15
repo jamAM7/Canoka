@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 interface Props {
-  /** Whether a timetable link is saved on this machine. */
+  /** Whether a timetable link is saved. */
   subscribed: boolean;
 }
 
@@ -76,8 +76,8 @@ export function TimetableSettings({ subscribed }: Props) {
           />
           <span className="mt-1 block text-xs text-text-muted">
             Puts your classes on the calendar as University Timetable. Copy the iCal subscription link from UTS My
-            Timetable. Anyone with the link can see your timetable, so it&apos;s saved only in .env.local on this
-            computer.
+            Timetable. Anyone with the link can see your timetable, so Canoka saves it with your account and never
+            shows it again.
           </span>
         </label>
         <div className="flex flex-wrap items-center gap-3">

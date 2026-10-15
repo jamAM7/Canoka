@@ -2,11 +2,15 @@
 //   GET    /api/scraper?run=<id>&since=<line>  the current or last scrape, and its new output
 //   POST   /api/scraper  { ...ScrapeOptions }  start a scrape, one at a time
 //   DELETE /api/scraper                        stop the running scrape
-// It runs scraper/scrape.py on this machine with the Canvas token in
-// scraper/.env, so lib/guard limits who can use it.
+// It runs scraper/scrape.py on this machine, signed in with the Canvas
+// connection saved in Settings, so lib/guard limits who can use it. The app's
+// own data comes from /api/canvas/sync; this builds the offline corpus in
+// scraper/out for the scripts in llm/.
 import { NextResponse } from "next/server";
 import { parseScrapeOptions, type ScrapeOptions } from "@/lib/scraper/cli";
 import { refuseUnlessLocal } from "@/lib/guard";
+import { canvasSignIn } from "@/lib/data/canvas-connection";
+import { currentUser } from "@/lib/data/user";
 import { ScrapeBusyError, scrapeProgress, startScrape, stopScrape } from "@/lib/scraper/runner";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +35,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    startScrape(options);
+    startScrape(options, await canvasSignIn((await currentUser()).id));
     return NextResponse.json(scrapeProgress(), { status: 202 });
   } catch (error) {
     const status = error instanceof ScrapeBusyError ? 409 : 500;

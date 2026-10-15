@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 interface Props {
   /** Whether an Anthropic API key is saved on this machine. Never the key itself. */
   hasKey: boolean;
+  /** On the hosted site, where the key is the server's ANTHROPIC_API_KEY and can't be saved from here. */
+  hosted: boolean;
 }
 
 const FIELD =
@@ -14,7 +16,7 @@ const PRIMARY_BUTTON =
   "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50";
 
 // Settings › AI: the Anthropic API key that AI review of notes runs on.
-export function AiSettings({ hasKey }: Props) {
+export function AiSettings({ hasKey, hosted }: Props) {
   const router = useRouter();
   const [key, setKey] = useState("");
   const [saving, setSaving] = useState(false);
@@ -44,6 +46,19 @@ export function AiSettings({ hasKey }: Props) {
       setSaving(false);
     }
   };
+
+  if (hosted) {
+    return (
+      <section className="rounded-xl border border-border bg-surface p-5 shadow-sm">
+        <h2 className="text-xl font-semibold text-text">AI</h2>
+        <p className="mt-2 text-sm text-text-muted">
+          {hasKey
+            ? "Set up on the server: AI review of your notes is ready to use."
+            : "Not set up on this server yet, so AI review of notes is off. Whoever runs the site sets ANTHROPIC_API_KEY."}
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="rounded-xl border border-border bg-surface p-5 shadow-sm">

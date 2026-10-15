@@ -1,11 +1,12 @@
-// Settings › Canvas access token: how to make the token the Canvas scraper
-// signs in with, step by step, and where to paste it. Linked from the API
-// token field in Settings › Canvas scraper.
+// Settings › Canvas access token: how to make the token Canoka signs in to
+// Canvas with, step by step, and where to paste it. Linked from the API token
+// field in Settings › Canvas.
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { NavBar } from "@/components/shell/NavBar";
 import { ChevronIcon } from "@/components/shell/icons";
-import { scraperSetup } from "@/lib/scraper/runner";
+import { canvasConnection, type CanvasConnection } from "@/lib/data/canvas-connection";
+import { currentUser } from "@/lib/data/user";
 
 export const metadata = { title: "Canvas access token · Canoka" };
 
@@ -24,9 +25,14 @@ const CODE = "font-mono text-xs";
 const PRIMARY_BUTTON =
   "inline-flex rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary transition-colors hover:bg-primary-dark";
 
-export default function CanvasTokenPage() {
-  const setup = scraperSetup();
-  const canvasSettings = canvasSettingsUrl(setup.canvasUrl);
+export default async function CanvasTokenPage() {
+  let connection: CanvasConnection | null = null;
+  try {
+    connection = await canvasConnection((await currentUser()).id);
+  } catch {
+    // Not set up yet: the steps read the same without it.
+  }
+  const canvasSettings = canvasSettingsUrl(connection?.baseUrl ?? null);
 
   return (
     <div className="app-shell">
@@ -45,8 +51,8 @@ export default function CanvasTokenPage() {
               Get a Canvas access token
             </h1>
             <p className="mt-1 text-sm text-text-muted">
-              The Canvas scraper signs in to Canvas with an access token that you make there. It takes a minute.
-              {setup.token && " You already have one saved: saving a new one replaces it."}
+              Canoka signs in to Canvas with an access token that you make there. It takes a minute.
+              {connection && " You already have one saved: saving a new one replaces it."}
             </p>
           </header>
 
@@ -90,7 +96,7 @@ export default function CanvasTokenPage() {
                 <p>
                   In{" "}
                   <Link href="/settings#canvas" className={LINK}>
-                    Settings › Canvas scraper
+                    Settings › Canvas
                   </Link>
                   , enter your <strong className={UI}>Canvas URL</strong>: the address you sign in to, like{" "}
                   <code className={CODE}>https://canvas.uts.edu.au</code>. The address of any Canvas page works too, as
@@ -98,7 +104,8 @@ export default function CanvasTokenPage() {
                   <strong className={UI}>Save</strong>.
                 </p>
                 <p>
-                  Then click <strong className={UI}>Run scrape</strong> to pull in your subjects.
+                  Canoka checks the token with Canvas before saving it. Then click{" "}
+                  <strong className={UI}>Sync subjects</strong> to pull in your subjects.
                 </p>
               </Step>
             </ol>
@@ -109,8 +116,8 @@ export default function CanvasTokenPage() {
             <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-text-muted">
               <li>Anyone who has the token can use Canvas as you, so treat it like a password.</li>
               <li>
-                Canoka keeps it only in <code className={CODE}>scraper/.env</code> on this computer. Git ignores that
-                file, so it never ends up in a commit, and Settings never shows the token again.
+                Canoka saves it with your account in its database, and only its server reads it. Settings never shows
+                the token again, and Disconnect deletes it.
               </li>
               <li>Everyone makes their own. Don&apos;t share yours or post it in a chat.</li>
               <li>
@@ -133,9 +140,8 @@ export default function CanvasTokenPage() {
               <Problem title="Settings says “Paste the access token for this Canvas too.”">
                 You changed the Canvas URL. A token only works on the Canvas that made it, so make one there.
               </Problem>
-              <Problem title="The scrape stops at “Could not list courses” with a 401">
-                Canvas turned the token down: it&apos;s wrong, expired, deleted, or from a different Canvas. Make a new
-                one and save it.
+              <Problem title="Settings says “Canvas turned the token down”">
+                It&apos;s wrong, expired, deleted, or from a different Canvas. Make a new one and save it.
               </Problem>
             </dl>
           </section>
@@ -171,7 +177,7 @@ function Problem({ title, children }: { title: string; children: ReactNode }) {
 /** Canvas's own settings page, where tokens are made: on the saved Canvas, else the default. Only ever https. */
 function canvasSettingsUrl(canvasUrl: string | null): URL {
   try {
-    // CANVAS_BASE_URL from the environment arrives unchecked, unlike an address saved from Settings.
+    // Settings only saves an https origin, but check anyway: this becomes a link.
     const url = new URL("/profile/settings", canvasUrl ?? DEFAULT_CANVAS);
     if (url.protocol === "https:") return url;
   } catch {

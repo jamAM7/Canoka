@@ -23,7 +23,7 @@ export default async function CalendarPage() {
         courses.map((c) => c.id),
         user.timezone,
       ),
-      getTimetableEvents(courses, user.timezone),
+      getTimetableEvents(user.id, courses, user.timezone),
     ]);
     return (
       <main>

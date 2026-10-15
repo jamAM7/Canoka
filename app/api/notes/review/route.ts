@@ -1,19 +1,19 @@
 // AI review of a student's notes for one week of a subject.
 //
 //   POST /api/notes/review  { courseId, week, refresh? }
-//     Does everything in order: scrapes the week from Canvas and saves it as
+//     Does everything in order: fetches the week from Canvas and saves it as
 //     course_content, reads the week's notes (plain_text) and content from the
 //     database, has Claude compare them, stores the result in week_reviews and
-//     returns it. It can take a minute or two. Save any edits first: it reads
-//     the notes from the database.
+//     returns it. It can take a minute. Save any edits first: it reads the
+//     notes from the database.
 //       -> 200 { review: WeekReviewDto,            (lib/notes/types)
-//                contentStale: boolean,            true: Canvas couldn't be reached, so the
-//                                                  content already stored was used. It may be out of date.
+//                contentStale: boolean,            true: Canvas couldn't be reached or isn't connected,
+//                                                  so the content already stored was used. It may be out of date.
 //                staleReason: string | null,       why, when contentStale
 //                contentUpdatedAt: string | null } when the week's content was last saved
 //     `courseId` is a subject's id and `week` the week number, both from GET /api/notes
-//     (`subjects[].id`, `subjects[].weeks[].number`). `refresh: true` makes the scrape ask
-//     Canvas again instead of using what it cached (pages and modules last a week); slower.
+//     (`subjects[].id`, `subjects[].weeks[].number`). `refresh` is accepted but changes
+//     nothing: every review asks Canvas.
 //
 //   GET /api/notes/review?courseId=<uuid>&week=<n>
 //       -> 200 { review: WeekReviewDto | null }     the week's latest stored review
@@ -21,9 +21,9 @@
 // Errors are { error: string }: 400 bad request or no notes for the week, 404 not the
 // student's subject or the week isn't synced yet, 409 this week is already being reviewed,
 // 502 Claude failed (the message is fit to show), 500 anything else.
-// In development it scrapes the week with Python first. In production (the hosted site) it
-// skips the scrape and reviews the content already stored, with contentStale true, or
-// returns 404 if none is stored. lib/guard only checks the request came from this app.
+// It signs in to Canvas with the student's saved connection (lib/data/canvas-connection),
+// the same in development and on the hosted site. lib/guard only checks the request came
+// from this app.
 import { NextResponse } from "next/server";
 import { requireSameOrigin } from "@/lib/guard";
 import { ReviewError } from "@/lib/ai/review";
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   try {
     const input = parseReviewInput(await readJson(request));
     const user = await currentUser();
-    const { review, staleReason } = await reviewWeek(user.id, input);
+    const { review, staleReason } = await reviewWeek(user, input);
     return NextResponse.json({
       review,
       contentStale: review.contentStale,

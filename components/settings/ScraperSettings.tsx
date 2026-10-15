@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
@@ -33,9 +32,10 @@ const SECONDARY_BUTTON =
 /** Output kept on the page, as on the server. */
 const MAX_LINES = 2000;
 
-// Settings › Canvas scraper: run scraper/scrape.py with any of its options,
-// follow its output, and see what the last scrape found. Notes lists the
-// subjects from that last scrape.
+// Settings › Local scraper: run scraper/scrape.py with any of its options,
+// follow its output, and see what the last scrape found. It builds the offline
+// corpus in scraper/out for the scripts in llm/; the app's own subjects come
+// from Sync in Settings › Canvas. Local only: the hosted site has no Python.
 export function ScraperSettings({ setup, lastScrape, progress }: Props) {
   const router = useRouter();
   const [options, setOptions] = useState<ScrapeOptions>(DEFAULT_OPTIONS);
@@ -58,69 +58,13 @@ export function ScraperSettings({ setup, lastScrape, progress }: Props) {
   const blockers = [
     !setup.enabled && "Scraping from the app only works in development (npm run dev).",
     !setup.python && "There's no Python virtualenv at .venv. Run npm run setup:python to create it.",
-    (!setup.canvasUrl || !setup.token) && "Save your Canvas URL and API token above first.",
+    (!setup.canvasUrl || !setup.token) && "Connect Canvas above first.",
   ].filter((b): b is string => Boolean(b));
-
-  const [canvasUrl, setCanvasUrl] = useState(setup.canvasUrl ?? "");
-  // Never filled from the server: the saved token stays there.
-  const [token, setToken] = useState("");
-  const [savingCanvas, setSavingCanvas] = useState(false);
-  const [canvasMessage, setCanvasMessage] = useState<{ text: string; error: boolean } | null>(null);
-  const canvasChanged = canvasUrl.trim() !== (setup.canvasUrl ?? "") || token.trim() !== "";
-
-  const saveCanvas = async (e: FormEvent) => {
-    e.preventDefault();
-    setCanvasMessage(null);
-    setSavingCanvas(true);
-    try {
-      const res = await fetch("/api/scraper/canvas", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ baseUrl: canvasUrl, token }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setCanvasMessage({ text: data.error, error: true });
-        return;
-      }
-      setCanvasUrl(data.canvasUrl);
-      setToken("");
-      setCanvasMessage({ text: "Saved.", error: false });
-      router.refresh();
-    } catch {
-      setCanvasMessage({ text: "Couldn't reach the app's server.", error: true });
-    } finally {
-      setSavingCanvas(false);
-    }
-  };
 
   const show = (data: ScrapeProgress, append: boolean) => {
     setRun(data.run);
     setLines((prev) => (append ? [...prev, ...data.lines] : data.lines).slice(-MAX_LINES));
     next.current = data.next;
-  };
-
-  // Saves what a scrape found to the database, so Notes can list its subjects and weeks.
-  const syncToDatabase = async () => {
-    const say = (text: string, stderr = false) =>
-      setLines((prev) => [...prev, { text, stderr }].slice(-MAX_LINES));
-    say("Saving the subjects to the database…");
-    try {
-      const res = await fetch("/api/canvas/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: "{}",
-      });
-      const data = await res.json();
-      for (const s of data.synced ?? []) {
-        say(`Saved ${s.code ?? s.name}: ${s.weeks} weeks, ${s.assignments} assessments.`);
-        for (const warning of s.warnings) say(warning, true);
-      }
-      for (const e of data.errors ?? []) say(`Couldn't save ${e.subject}: ${e.error}`, true);
-      if (!res.ok && !data.errors) say(`Couldn't save the subjects: ${data.error}`, true);
-    } catch {
-      say("Couldn't reach the app's server to save the subjects.", true);
-    }
   };
 
   // Follow a running scrape's output, then reload the page's data when it ends.
@@ -143,7 +87,6 @@ export function ScraperSettings({ setup, lastScrape, progress }: Props) {
         }
         show(data, data.run.id === id);
         if (data.run.status !== "running") {
-          if (data.run.status === "succeeded") await syncToDatabase();
           router.refresh();
           return;
         }
@@ -212,58 +155,15 @@ export function ScraperSettings({ setup, lastScrape, progress }: Props) {
   };
 
   return (
-    <section id="canvas" className="rounded-xl border border-border bg-surface shadow-sm">
+    <section id="scraper" className="rounded-xl border border-border bg-surface shadow-sm">
       <div className="space-y-5 p-5">
-        <h2 className="text-xl font-semibold text-text">Canvas scraper</h2>
-
-        <form onSubmit={saveCanvas} className="max-w-xl space-y-3">
-          <label className="block">
-            <span className="mb-1.5 block text-sm text-text">Canvas URL</span>
-            <input
-              className={FIELD}
-              value={canvasUrl}
-              onChange={(e) => {
-                setCanvasUrl(e.target.value);
-                setCanvasMessage(null);
-              }}
-              placeholder="https://canvas.uts.edu.au"
-              inputMode="url"
-              spellCheck={false}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-sm text-text">API token</span>
-            <input
-              type="password"
-              className={FIELD}
-              value={token}
-              onChange={(e) => {
-                setToken(e.target.value);
-                setCanvasMessage(null);
-              }}
-              placeholder={setup.token ? "Saved. Paste a new one to replace it." : "Paste your access token"}
-              autoComplete="off"
-              spellCheck={false}
-            />
-            <span className="mt-1 block text-xs text-text-muted">
-              Make one in Canvas under Account › Settings › New access token. It&apos;s saved in
-              scraper/.env on this computer.{" "}
-              <Link href="/settings/canvas-token" className="font-medium text-primary hover:underline">
-                How to get one
-              </Link>
-            </span>
-          </label>
-          <div className="flex flex-wrap items-center gap-3">
-            <button type="submit" disabled={!canvasChanged || savingCanvas} className={PRIMARY_BUTTON}>
-              Save
-            </button>
-            {canvasMessage && (
-              <span className={`text-sm ${canvasMessage.error ? "text-error" : "text-success"}`}>
-                {canvasMessage.text}
-              </span>
-            )}
-          </div>
-        </form>
+        <div>
+          <h2 className="text-xl font-semibold text-text">Local scraper</h2>
+          <p className="mt-1 text-sm text-text-muted">
+            Builds the offline corpus in scraper/out for the scripts in llm/, signed in with the Canvas connection
+            above. Only while running the app locally. Notes and the calendar get your subjects from Sync above.
+          </p>
+        </div>
 
         <p className="text-sm text-text-muted">
           Last scrape:{" "}
@@ -460,11 +360,6 @@ export function ScraperSettings({ setup, lastScrape, progress }: Props) {
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <span className={`h-2.5 w-2.5 rounded-full ${STATUS_DOT[run.status]}`} aria-hidden="true" />
             <span className="text-text">{statusText(run, now)}</span>
-            {run.status === "succeeded" && (
-              <Link href="/notes" className="font-medium text-primary hover:underline">
-                Open Notes
-              </Link>
-            )}
           </div>
           <pre
             ref={log}
@@ -495,7 +390,7 @@ export function ScraperSettings({ setup, lastScrape, progress }: Props) {
   );
 }
 
-/** Pulls one week of a subject from the last scrape (scraper/week.py): what AI review checks notes against. */
+/** Pulls one week of a subject from the last scrape (scraper/week.py), as the offline corpus renders it. */
 function WeekContent({ subjects, disabled }: { subjects: Subject[]; disabled: boolean }) {
   const [subjectId, setSubjectId] = useState(subjects[0].id);
   const [week, setWeek] = useState(1);
@@ -524,7 +419,7 @@ function WeekContent({ subjects, disabled }: { subjects: Subject[]; disabled: bo
       <div>
         <h3 className="text-base font-semibold text-text">Week content</h3>
         <p className="mt-0.5 text-sm text-text-muted">
-          What the last scrape holds for one week of a subject: the content AI review checks your notes against.{" "}
+          What the last scrape holds for one week of a subject, as the corpus renders it for a prompt.{" "}
           <code className="font-mono text-xs">python week.py 41201 3</code> prints the same.
         </p>
       </div>

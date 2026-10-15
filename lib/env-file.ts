@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 // The gitignored KEY=value files that hold this machine's credentials:
-// scraper/.env for Canvas, llm/.env for the Anthropic API. Server-only.
+// llm/.env for the Anthropic API. Server-only.
 
 /** KEY=value lines, parsed like scraper/scrape.py's load_env. */
 export function readEnvFile(file: string): Record<string, string> {
