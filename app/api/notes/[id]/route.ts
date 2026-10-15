@@ -10,9 +10,9 @@
 //        no longer lists it.
 //
 // Errors are { error: string }: 400 bad body, 404 not the student's note, 500.
-// lib/guard limits it to local development until there's sign-in.
+// lib/guard only checks the request came from this app; there is no sign-in yet.
 import { NextResponse } from "next/server";
-import { refuseUnlessLocal } from "@/lib/guard";
+import { requireSameOrigin } from "@/lib/guard";
 import { currentUser } from "@/lib/data/user";
 import { NotesError, archiveNote, isUuid, parseNotePatch, updateNote } from "@/lib/data/notes";
 import { failure, readJson } from "@/lib/data/http";
@@ -24,7 +24,7 @@ interface Context {
 }
 
 export async function PATCH(request: Request, { params }: Context) {
-  const refused = refuseUnlessLocal(request);
+  const refused = requireSameOrigin(request);
   if (refused) return refused;
 
   try {
@@ -38,7 +38,7 @@ export async function PATCH(request: Request, { params }: Context) {
 }
 
 export async function DELETE(request: Request, { params }: Context) {
-  const refused = refuseUnlessLocal(request);
+  const refused = requireSameOrigin(request);
   if (refused) return refused;
 
   try {

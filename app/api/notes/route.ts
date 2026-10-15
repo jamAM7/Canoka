@@ -11,9 +11,9 @@
 // course_modules row, from `subjects[].weeks[].moduleId`). `content` is a
 // TipTap document. Errors are { error: string } with 400 (bad body), 404
 // (not the student's subject, week or note), 413 (note too long) or 500.
-// lib/guard limits it to local development until there's sign-in.
+// lib/guard only checks the request came from this app; there is no sign-in yet.
 import { NextResponse } from "next/server";
-import { refuseUnlessLocal } from "@/lib/guard";
+import { requireSameOrigin } from "@/lib/guard";
 import { currentUser } from "@/lib/data/user";
 import { createNote, getNotesOverview, parseNewNote } from "@/lib/data/notes";
 import { failure, readJson } from "@/lib/data/http";
@@ -21,7 +21,7 @@ import { failure, readJson } from "@/lib/data/http";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const refused = refuseUnlessLocal(request);
+  const refused = requireSameOrigin(request);
   if (refused) return refused;
 
   try {
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const refused = refuseUnlessLocal(request);
+  const refused = requireSameOrigin(request);
   if (refused) return refused;
 
   try {

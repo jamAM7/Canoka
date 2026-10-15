@@ -7,12 +7,13 @@ import type { WeekReviewDto } from "@/lib/notes/types";
 import { dbError } from "./db-error";
 import { NotesError, isUuid } from "./notes";
 import { weekModuleIds, weekModules } from "./week-modules";
-import { saveWeekContent, scrapeWeek } from "./week-sync";
 
 // The AI review of a student's notes for one week of a subject.
 //
 //   1. check the request and the week's notes (cheap, before anything slow)
-//   2. scrape the week from Canvas and save it as course_content
+//   2. scrape the week from Canvas and save it as course_content (development
+//      only: in production the Python scraper can't run, so the content already
+//      stored is used, and it's an error if there is none)
 //   3. read the week's notes and content back from the database
 //   4. have Claude compare them, and save the result in week_reviews
 //
@@ -86,15 +87,28 @@ export async function reviewWeek(userId: string, input: ReviewInput): Promise<Re
   try {
     // Step 2. If Canvas or the save fails, review against what's already stored.
     let staleReason: string | null = null;
-    try {
-      await saveWeekContent(courseId, group.canonical.id, await scrapeWeek(course.external_course_id, week, input.refresh));
-    } catch (error) {
-      staleReason = error instanceof Error ? error.message : String(error);
-      console.error(`Week scrape failed for course ${course.external_course_id}, week ${week}: ${staleReason}`);
+    if (process.env.NODE_ENV === "production") {
+      // No Python on the hosted site. week-sync is imported only below, so its
+      // child_process and fs imports never load here.
+      staleReason = "Using previously synced Canvas content (live scraping isn't available on the hosted site).";
+    } else {
+      try {
+        const { saveWeekContent, scrapeWeek } = await import("./week-sync");
+        await saveWeekContent(courseId, group.canonical.id, await scrapeWeek(course.external_course_id, week, input.refresh));
+      } catch (error) {
+        staleReason = error instanceof Error ? error.message : String(error);
+        console.error(`Week scrape failed for course ${course.external_course_id}, week ${week}: ${staleReason}`);
+      }
     }
 
     // Step 3.
     const content = await storedContent(courseId, moduleIds);
+    if (process.env.NODE_ENV === "production" && content.markdown === null) {
+      throw new NotesError(
+        "This week's course content hasn't been synced yet, so it can't be reviewed here. The subject needs syncing first.",
+        404,
+      );
+    }
 
     // Step 4.
     const { review, model } = await reviewNotes({

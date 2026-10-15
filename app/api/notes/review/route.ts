@@ -21,9 +21,11 @@
 // Errors are { error: string }: 400 bad request or no notes for the week, 404 not the
 // student's subject or the week isn't synced yet, 409 this week is already being reviewed,
 // 502 Claude failed (the message is fit to show), 500 anything else.
-// It runs Python on this machine and uses the API key here, so lib/guard limits it to local development.
+// In development it scrapes the week with Python first. In production (the hosted site) it
+// skips the scrape and reviews the content already stored, with contentStale true, or
+// returns 404 if none is stored. lib/guard only checks the request came from this app.
 import { NextResponse } from "next/server";
-import { refuseUnlessLocal } from "@/lib/guard";
+import { requireSameOrigin } from "@/lib/guard";
 import { ReviewError } from "@/lib/ai/review";
 import { currentUser } from "@/lib/data/user";
 import { failure, readJson } from "@/lib/data/http";
@@ -32,7 +34,7 @@ import { latestWeekReview, parseReviewInput, parseWeekRef, reviewWeek } from "@/
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const refused = refuseUnlessLocal(request);
+  const refused = requireSameOrigin(request);
   if (refused) return refused;
 
   try {
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  const refused = refuseUnlessLocal(request);
+  const refused = requireSameOrigin(request);
   if (refused) return refused;
 
   try {
