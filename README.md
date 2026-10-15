@@ -107,14 +107,16 @@ installs on Windows, macOS and Linux.
 | Variable | Where to get it |
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project → Settings → API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project → Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project → Settings → API. Sign-in uses it, in the browser and in `middleware.ts`. It's built into the pages, so set it before building. `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` works instead |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase project → Settings → API (server-only, never expose client-side) |
-| `SUPABASE_USER_ID` | The shared dev user's `public.users.id` (ask the team). Stands in for sign-in until Supabase Auth is wired up |
 | `ANTHROPIC_API_KEY` | console.anthropic.com. Locally you can save it from Settings → AI instead |
 | `TIMETABLE_ICAL_URL` | Optional fallback. Students save their UTS My Timetable link from Settings → Timetable |
 
-There's no Canvas variable: each student saves their Canvas address and access
-token from Settings → Canvas, and it's kept in Supabase (see below).
+Each person signs up at `/sign-up` (Supabase Auth), and the app's pages need
+you signed in. The first time an account signs in, it gets its own
+`public.users` row (`lib/data/user.ts`), so subjects, notes, the Canvas
+connection and reviews are per person. There's no Canvas variable: each person
+saves their Canvas address and access token from Settings → Canvas (see below).
 
 ## Canvas sync and hosting
 
@@ -126,20 +128,26 @@ the hosted site (Netlify, which can't run Python):
 - **Sync subjects** (`POST /api/canvas/sync`) pulls this session's subjects,
   their modules and weeks, and their assessments into Supabase
   (`lib/canvas/subject.ts`, then `lib/data/subject-sync.ts`). That's a few
-  requests per subject.
+  requests per subject. It also notes every file the subjects point at (module
+  files, and files linked from pages and briefs).
+- **Then Settings reads those files** (`POST /api/canvas/files`, called until
+  nothing's left, about 40 seconds a call): PDFs, Word and PowerPoint files,
+  speaker notes included (`lib/canvas/files.ts`). Only the text is kept, in
+  `canvas_files`. Each file is read once; later syncs skip it.
 - **AI review of a week** fetches just that week from Canvas
-  (`lib/canvas/week.ts`) and saves it as `course_content` before reviewing.
+  (`lib/canvas/week.ts`), adds the text of its files, and saves it as
+  `course_content` before reviewing.
 
-This needs the migration `supabase/migrations/20261016120000_canvas_connections.sql`.
-Apply it in the Supabase SQL editor. On Netlify, set the same Supabase
-variables, `SUPABASE_USER_ID` and `ANTHROPIC_API_KEY` as above; nothing
-Canvas-specific is needed.
+This needs the migrations `20261016120000_canvas_connections.sql` and
+`20261016130000_accounts_and_canvas_files.sql` in `supabase/migrations/`.
+Apply them in the Supabase SQL editor. On Netlify, set the Supabase variables
+and `ANTHROPIC_API_KEY` as above; nothing Canvas-specific is needed. In
+Supabase → Authentication → URL Configuration, add the site's address (and
+`http://localhost:3000`) so sign-up confirmation links come back to the app.
 
 The token is stored as-is in a table with row level security on and no
 policies, so only the app's server code can read it. Anyone with access to the
-Supabase dashboard can still see it. There's no sign-in yet, so anyone who
-opens the hosted site uses the shared dev user's connection. They can't read
-the token, but they can sync or replace it.
+Supabase dashboard can still see it.
 
 ## Canvas scraper
 

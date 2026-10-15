@@ -3,7 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // || rather than ??: an .env line left as `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=` is "", not missing.
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return NextResponse.next({ request });
 
   let response = NextResponse.next({ request });

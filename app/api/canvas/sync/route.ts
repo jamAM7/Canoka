@@ -1,9 +1,10 @@
 // POST /api/canvas/sync  { courses?: string[] }
 // Pulls the student's subjects from Canvas into Supabase: each subject's course,
 // the student's enrolment, its modules and weeks, and its assessments (see
-// lib/canvas/subject and lib/data/subject-sync). It signs in with the Canvas
-// connection saved from Settings (lib/data/canvas-connection), so it works on
-// the hosted site as well as locally.
+// lib/canvas/subject and lib/data/subject-sync). It also notes the files each
+// subject points at, for POST /api/canvas/files to read. It signs in with the
+// Canvas connection saved from Settings (lib/data/canvas-connection), so it
+// works on the hosted site as well as locally.
 //
 // `courses` lists subject codes or Canvas course ids, from any session; leave
 // it out for every subject in the current session. Safe to repeat: everything
@@ -19,9 +20,12 @@
 // lib/guard only checks the request came from this app.
 import { NextResponse } from "next/server";
 import { CanvasError, mapLimit } from "@/lib/canvas/client";
+import { subjectFiles } from "@/lib/canvas/files";
 import { currentSubjects, fetchSubject, findSubjects, subjectCode, subjectRows, type SubjectList } from "@/lib/canvas/subject";
 import { requireSameOrigin } from "@/lib/guard";
 import { canvasClientFor, markCanvasSynced, signInProblem } from "@/lib/data/canvas-connection";
+import { registerFiles } from "@/lib/data/canvas-files";
+import { NotesError } from "@/lib/data/notes";
 import { syncSubject, type SyncedSubject } from "@/lib/data/subject-sync";
 import { currentUser } from "@/lib/data/user";
 
@@ -47,7 +51,7 @@ export async function POST(request: Request) {
     userId = (await currentUser()).id;
     client = await canvasClientFor(userId);
   } catch (error) {
-    return NextResponse.json({ error: messageOf(error) }, { status: 500 });
+    return NextResponse.json({ error: messageOf(error) }, { status: error instanceof NotesError ? error.status : 500 });
   }
   if (!client) {
     return NextResponse.json({ error: "Connect Canvas first: save your Canvas URL and access token." }, { status: 400 });
@@ -73,6 +77,8 @@ export async function POST(request: Request) {
     try {
       const document = await fetchSubject(canvas, course);
       const subject = await syncSubject(userId, subjectRows(document, canvas.baseUrl));
+      // Files already noted, read or not, are left alone: each is read once.
+      await registerFiles(subject.courseId, await subjectFiles(canvas, document));
       // A hidden tab isn't a failure, but the subject is missing whatever it held.
       for (const [endpoint, outcome] of Object.entries(document.coverage)) {
         if (outcome.status !== "ok") subject.warnings.push(`Canvas didn't give its ${endpoint.replace("_", " ")} (${outcome.status}).`);

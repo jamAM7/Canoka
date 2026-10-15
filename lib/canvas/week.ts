@@ -2,6 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import type { ContentType } from "@/lib/supabase/types";
 import { CanvasError, MAX_WORKERS, mapLimit, type CanvasClient } from "./client";
+import { linkedFiles, type FileText, type KnownFile } from "./files";
 import { htmlToMarkdown } from "./markdown";
 import {
   coverageOf,
@@ -27,10 +28,14 @@ import {
 // demoted into place. The rows don't say which module they belong to: the app
 // files every one under the week's canonical module (lib/data/week-modules.ts).
 //
+// Files are read ahead of time, when Settings syncs (lib/data/canvas-files),
+// since a week's readings can take longer to read than a request lasts on the
+// hosted site. weekItems says which files the week points at, and weekRows
+// puts the text stored for them into the rows.
+//
 // Unlike the Python, pages that repeat across subjects (UTS template filler)
 // aren't flagged: that takes every subject at once, and the template pages sit
-// in "Get started" rather than in a week. File contents aren't read either, as
-// the scraper only read them with --extract.
+// in "Get started" rather than in a week.
 
 /** One course_content row's fields, before it's given a course and module. */
 export interface WeekItem {
@@ -92,13 +97,25 @@ interface Reads {
   coverage: Record<string, Coverage>;
 }
 
-/** The week's content as rows, in the order a week reads. Throws if Canvas can't be read at all. */
+/** A week read from Canvas, before the text of its files goes in (weekRows). */
+export interface WeekContent {
+  week: number;
+  /** The rows, in the order a week reads, without the coverage note. */
+  items: WeekItem[];
+  /** Every Canvas file the week points at: its File items, and links in its pages and briefs. */
+  files: KnownFile[];
+  coverage: Record<string, Coverage>;
+  /** The course on Canvas, e.g. https://canvas.uts.edu.au/courses/40948. */
+  webUrl: string;
+}
+
+/** The week's content, in the order a week reads. Throws if Canvas can't be read at all. */
 export async function weekItems(
   client: CanvasClient,
   externalCourseId: string,
   week: number,
   timezone: string,
-): Promise<WeekItem[]> {
+): Promise<WeekContent> {
   if (!COURSE_ID.test(externalCourseId)) throw new Error("This subject's Canvas id isn't one Canoka can read.");
   const document = await fetchSubjectById(client, externalCourseId);
   const webUrl = `${client.baseUrl}/courses/${externalCourseId}`;
@@ -113,6 +130,8 @@ export async function weekItems(
 
   const rows: WeekItem[] = [];
   const seen = new Set<string>();
+  const files = new Map<string, string | null>();
+  const noteFiles = (list: KnownFile[]) => list.forEach((f) => files.set(f.id, files.get(f.id) ?? f.name));
 
   const add = (
     kind: ContentType,
@@ -140,8 +159,10 @@ export async function weekItems(
     });
   };
 
-  const addAssessment = (a: Assessment) =>
+  const addAssessment = (a: Assessment) => {
+    noteFiles(linkedFiles(a.brief, client.baseUrl));
     add("assignment", a.id, a.name, assessmentLines(a, timezone).join("\n"), a.url, a.published !== false);
+  };
 
   const addItem = (item: ModuleItem) => {
     const kind = ITEM_KINDS[item.type ?? ""];
@@ -151,10 +172,12 @@ export async function weekItems(
       const page = reads.pages.get(item.page_url ?? "");
       // Pages that were never retrieved say nothing.
       if (page) {
+        noteFiles(linkedFiles(page.content, client.baseUrl));
         add("page", item.page_url, page.title || title, itemLines([item], reads.pages).join("\n"),
           page.url || item.url, page.published !== false, page.updated_at);
       }
     } else if (kind === "file" && contentId) {
+      noteFiles([{ id: contentId, name: title }]);
       add("file", contentId, title, itemLines([item], reads.pages).join("\n"), `${webUrl}/files/${contentId}`);
     } else if (kind === "assignment" && contentId && assessments.has(contentId)) {
       addAssessment(assessments.get(contentId)!);
@@ -167,11 +190,15 @@ export async function weekItems(
       ].filter(Boolean);
       const lines = [`### ${title}`, ""];
       if (facts.length > 0) lines.push(`_${facts.join("; ")}_`, "");
-      if (quiz?.description) lines.push(demote(quiz.description, HEADING_FLOOR));
+      if (quiz?.description) {
+        noteFiles(linkedFiles(quiz.description, client.baseUrl));
+        lines.push(demote(quiz.description, HEADING_FLOOR));
+      }
       add("quiz", contentId, quiz?.title || title, lines.join("\n"), quiz?.url || item.url);
     } else if (kind === "discussion" && contentId) {
       const topic = reads.discussions.get(contentId);
       const message = topic?.message ?? "";
+      noteFiles(linkedFiles(message, client.baseUrl));
       add("discussion", contentId, title, message ? `### ${title}\n\n${demote(message, HEADING_FLOOR)}` : `- ${title}`,
         topic?.url || item.url);
     } else if (kind === "link" || kind === "other") {
@@ -194,12 +221,64 @@ export async function weekItems(
     if (assessment.id && weekLabel(assessment.name) === week) addAssessment(assessment);
   }
 
+  return { week, items: rows, files: Array.from(files, ([id, name]) => ({ id, name })), coverage, webUrl };
+}
+
+/**
+ * The week's rows with its files' stored text in them: a File item's "- name"
+ * becomes the file's text, and a file a page or brief links to gets a row of
+ * its own after the rest. Ends with the coverage note.
+ */
+export function weekRows(content: WeekContent, stored: Map<string, FileText>): WeekItem[] {
+  const rows = content.items.map((row) => ({ ...row }));
+  const coverage = { ...content.coverage };
+  let unread = 0;
+  let unreadable = 0;
+  // Staff re-upload the same document as "(1)", "(2)": its text goes in once.
+  const texts = new Set<string>();
+
+  for (const file of content.files) {
+    const saved = stored.get(file.id);
+    if (saved?.status === "read" && saved.text && texts.has(saved.text)) continue;
+    if (saved?.status === "read" && saved.text) {
+      texts.add(saved.text);
+      const name = saved.name || file.name || "Untitled file";
+      const lines = [`### ${name}`, ""];
+      if (saved.note) lines.push(`_Text ${saved.note}._`, "");
+      lines.push(demote(saved.text, HEADING_FLOOR + 1));
+      const body = lines.join("\n");
+      const item = rows.find((row) => row.content_type === "file" && row.external_content_id === file.id);
+      if (item) {
+        item.title = name;
+        item.body_text = body;
+      } else {
+        rows.push({
+          content_type: "file",
+          external_content_id: file.id,
+          title: name,
+          body_text: body,
+          source_url: `${content.webUrl}/files/${file.id}`,
+          position: 0,
+          published: true,
+          content_updated_at: null,
+        });
+      }
+    } else if (saved?.status === "skipped" || saved?.status === "empty") {
+      unreadable++;
+    } else {
+      unread++;
+    }
+  }
+  const counts = [unread && `${unread} not read yet`, unreadable && `${unreadable} can't be read`].filter(Boolean);
+  if (counts.length > 0) coverage.files = { status: counts.join(", ") };
+
+  rows.forEach((row, i) => (row.position = i + 1));
   // SYNTHETIC ROW, not from Canvas: what couldn't be read, so the review doesn't take a missing
   // reading for one that doesn't exist. Always written, and empty when nothing is missing, so an
   // old caveat can't outlive the gap it described.
   rows.push({
     content_type: "other",
-    external_content_id: `${COVERAGE_PREFIX}${week}`,
+    external_content_id: `${COVERAGE_PREFIX}${content.week}`,
     title: "Canvas coverage note",
     body_text: gaps(coverage),
     source_url: null,
@@ -242,9 +321,6 @@ async function readItems(client: CanvasClient, courseId: string, items: ModuleIt
     const topic = await client.get<CanvasTopic>(`${base}/discussion_topics/${id}`);
     return { title: topic.title ?? null, message: htmlToMarkdown(topic.message, client.baseUrl), url: topic.html_url ?? null };
   });
-  // Slides and readings are named, but what's in them isn't read.
-  if (items.some((i) => i.type === "File")) coverage["file contents"] = { status: "not read" };
-
   return { pages, quizzes, discussions, coverage };
 }
 

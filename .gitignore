@@ -30,3 +30,6 @@ pnpm-debug.log*
 Thumbs.db
 .vscode/
 .claude
+
+# Supabase CLI scratch: project links and connection details, per machine
+supabase/.temp/

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
-export function AccountSettings() {
+export function AccountSettings({ email }: { email: string | null }) {
   const router = useRouter();
 
   async function logOut() {
@@ -17,6 +17,12 @@ export function AccountSettings() {
   return (
     <section className="rounded-xl border border-border bg-surface p-5 shadow-sm">
       <h2 className="text-xl font-semibold text-text">Account</h2>
+      {email && (
+        <p className="mt-1 text-sm text-text-muted">
+          Signed in as <span className="text-text">{email}</span>. Your subjects, notes and Canvas connection are yours
+          alone.
+        </p>
+      )}
       <div className="mt-4 flex max-w-xl items-center justify-between gap-6 border-t border-border-light pt-4">
         <div>
           <p className="text-sm font-medium text-text">Log out of Canoka</p>

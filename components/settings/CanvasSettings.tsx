@@ -21,6 +21,17 @@ interface SyncResult {
   error?: string;
 }
 
+interface FilesResult {
+  read?: number;
+  skipped?: number;
+  failed?: number;
+  remaining?: number;
+  error?: string;
+}
+
+/** Calls to /api/canvas/files per sync, each up to about 40 seconds. What's left waits for the next sync. */
+const FILE_ROUNDS = 30;
+
 const FIELD =
   "w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary-light focus:shadow-focus focus:outline-none";
 const PRIMARY_BUTTON =
@@ -29,8 +40,9 @@ const SECONDARY_BUTTON =
   "rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text transition-colors hover:border-primary-light hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50";
 
 // Settings › Canvas: save the Canvas address and access token, then pull this
-// session's subjects, weeks and assessments into the app (/api/canvas/sync).
-// Works on the hosted site: everything is saved in Supabase.
+// session's subjects, weeks and assessments into the app (/api/canvas/sync),
+// then read the text of their PDFs, Word and PowerPoint files, a batch at a
+// time (/api/canvas/files). Works on the hosted site: everything is saved in Supabase.
 export function CanvasSettings({ connection, problem }: Props) {
   const router = useRouter();
   const [canvasUrl, setCanvasUrl] = useState(connection?.baseUrl ?? "");
@@ -40,6 +52,7 @@ export function CanvasSettings({ connection, problem }: Props) {
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [lines, setLines] = useState<{ text: string; error: boolean }[]>([]);
+  const [progress, setProgress] = useState<string | null>(null);
   const [synced, setSynced] = useState(false);
   const changed = canvasUrl.trim() !== (connection?.baseUrl ?? "") || token.trim() !== "";
 
@@ -93,9 +106,13 @@ export function CanvasSettings({ connection, problem }: Props) {
   const sync = async () => {
     setSyncing(true);
     setSynced(false);
-    setLines([{ text: "Pulling your subjects from Canvas…", error: false }]);
+    setLines([]);
+    setProgress("Pulling your subjects from Canvas…");
     const out: { text: string; error: boolean }[] = [];
-    const say = (text: string, error = false) => out.push({ text, error });
+    const say = (text: string, error = false) => {
+      out.push({ text, error });
+      setLines([...out]);
+    };
     try {
       const res = await fetch("/api/canvas/sync", {
         method: "POST",
@@ -111,14 +128,50 @@ export function CanvasSettings({ connection, problem }: Props) {
       }
       for (const e of data.errors ?? []) say(`Couldn't save ${e.subject}: ${e.error}`, true);
       if (!res.ok && !data.errors) say(data.error ?? "Couldn't sync your subjects.", true);
-      setSynced((data.synced?.length ?? 0) > 0);
+      const anySynced = (data.synced?.length ?? 0) > 0;
+      setSynced(anySynced);
       router.refresh();
+      if (anySynced) await readFiles(say);
     } catch {
       say("Couldn't reach the app's server.", true);
     } finally {
-      setLines(out);
+      setProgress(null);
       setSyncing(false);
     }
+  };
+
+  // Each file is read once: a later sync only reads files Canvas has added since.
+  const readFiles = async (say: (text: string, error?: boolean) => void) => {
+    const total = { read: 0, skipped: 0, failed: 0 };
+    let remaining = 0;
+    setProgress("Reading your subjects' files…");
+    for (let round = 0; round < FILE_ROUNDS; round++) {
+      const res = await fetch("/api/canvas/files", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const data: FilesResult = await res.json();
+      if (!res.ok) {
+        say(data.error ?? "Couldn't read the subjects' files.", true);
+        return;
+      }
+      total.read += data.read ?? 0;
+      total.skipped += data.skipped ?? 0;
+      total.failed += data.failed ?? 0;
+      remaining = data.remaining ?? 0;
+      if (remaining === 0) break;
+      setProgress(`Reading files: ${total.read} read, ${remaining} to go…`);
+    }
+    if (total.read + total.skipped + total.failed === 0 && remaining === 0) {
+      say("Files: all read already.");
+      return;
+    }
+    const parts = [`${total.read} read`];
+    if (total.skipped) parts.push(`${total.skipped} skipped (not documents, too big, or locked)`);
+    if (total.failed) parts.push(`${total.failed} couldn't be read, to try again next sync`);
+    say(`Files: ${parts.join(", ")}.`);
+    if (remaining > 0) say(`${remaining} files still to read: sync again to carry on.`, true);
   };
 
   return (
@@ -208,16 +261,18 @@ export function CanvasSettings({ connection, problem }: Props) {
             {syncing ? "Syncing…" : "Sync subjects"}
           </button>
           <span className="text-sm text-text-muted">
-            Pulls this session&apos;s subjects, weeks and assessments from Canvas into Notes and the calendar.
+            Pulls this session&apos;s subjects, weeks and assessments from Canvas into Notes and the calendar, and
+            reads their PDFs, slides and Word files for AI review. Each file is read once.
           </span>
         </div>
-        {lines.length > 0 && (
+        {(lines.length > 0 || progress) && (
           <ul role="status" className="space-y-1 text-sm">
             {lines.map((line, i) => (
               <li key={i} className={line.error ? "text-error" : "text-text"}>
                 {line.text}
               </li>
             ))}
+            {progress && <li className="animate-pulse text-text-muted">{progress}</li>}
           </ul>
         )}
         {synced && (

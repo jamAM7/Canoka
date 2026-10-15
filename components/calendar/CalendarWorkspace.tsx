@@ -149,6 +149,20 @@ export function CalendarWorkspace({ events: initialEvents, courses, notice }: Pr
     setStatus(id, column.status);
   }
 
+  // A new event from the week or month grid: a task of the student's own, on the board too.
+  function createEvent(title: string, start: Date, end: Date) {
+    const column = board.columns.find((c) => c.status === "todo") ?? board.columns[0];
+    const task = { ...createTask(title, column?.status ?? "todo"), start: start.toISOString(), end: end.toISOString() };
+    const next = [...events, task];
+    setEvents(next);
+    if (column) setBoard(moveCard(next, board, task.id, column.id, null));
+  }
+
+  // Dragged on the grid, or resized by its bottom edge.
+  function moveEvent(id: string, start: Date, end: Date) {
+    updateEvent(id, { start: start.toISOString(), end: end.toISOString() });
+  }
+
   function addTask(columnId: string, title: string) {
     const column = board.columns.find((c) => c.id === columnId);
     if (!column) return;
@@ -249,6 +263,8 @@ export function CalendarWorkspace({ events: initialEvents, courses, notice }: Pr
               events={calendarEvents}
               courseById={courseById}
               onSelect={setSelectedId}
+              onCreate={createEvent}
+              onMove={moveEvent}
             />
           )}
           {view === "month" && (
@@ -261,6 +277,8 @@ export function CalendarWorkspace({ events: initialEvents, courses, notice }: Pr
                 setAnchor(d);
                 setView("week");
               }}
+              onCreate={createEvent}
+              onMove={moveEvent}
             />
           )}
           {view === "kanban" && (

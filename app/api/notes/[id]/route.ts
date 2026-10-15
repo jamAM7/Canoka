@@ -10,7 +10,8 @@
 //        no longer lists it.
 //
 // Errors are { error: string }: 400 bad body, 404 not the student's note, 500.
-// lib/guard only checks the request came from this app; there is no sign-in yet.
+// lib/guard checks the request came from this app; the notes are the signed-in
+// student's (lib/data/user), and a signed-out request gets 401.
 import { NextResponse } from "next/server";
 import { requireSameOrigin } from "@/lib/guard";
 import { currentUser } from "@/lib/data/user";

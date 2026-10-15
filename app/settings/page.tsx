@@ -25,9 +25,11 @@ export default async function SettingsPage() {
 
   let connection: CanvasConnection | null = null;
   let subscribed = false;
+  let email: string | null = null;
   let problem: string | null = null;
   try {
     const user = await currentUser();
+    email = user.email;
     [connection, subscribed] = await Promise.all([
       canvasConnection(user.id),
       timetableUrl(user.id).then((url) => url !== null),
@@ -52,7 +54,7 @@ export default async function SettingsPage() {
           )}
           <TimetableSettings subscribed={subscribed} />
           <AiSettings hasKey={anthropicKey() !== null} hosted={!local} />
-          <AccountSettings />
+          <AccountSettings email={email} />
           <AppearanceSettings />
         </div>
       </main>

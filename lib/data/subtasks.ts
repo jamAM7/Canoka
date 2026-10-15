@@ -4,10 +4,19 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import type { AssignmentRow, CourseContentRow, CourseRow, StudyPlanRow, StudyPreferencesRow, StudyTaskRow } from "@/lib/supabase/types";
 import { skipReason } from "@/lib/subtasks/eligibility";
 import { newPlanRow, taskRows } from "@/lib/subtasks/rows";
-import { daysBetween, localDate, prefsFromRow, scheduleSubtasks, type StudyPrefs } from "@/lib/subtasks/schedule";
+import {
+  daysBetween,
+  localDate,
+  prefsFromRow,
+  scheduleSubtasks,
+  type Busy,
+  type PlannedSubtask,
+  type StudyPrefs,
+} from "@/lib/subtasks/schedule";
 import type { CreatedItem, FailedItem, GenerateResult, SkippedItem } from "@/lib/subtasks/types";
 import { dbError } from "./db-error";
 import { NotesError, isUuid } from "./notes";
+import { getTimetableEvents } from "./timetable";
 import type { CurrentUser } from "./user";
 
 // AI subtasks for assessments: Claude breaks an assessment into subtasks,
@@ -122,24 +131,53 @@ async function generate(user: CurrentUser, input: GenerateInput): Promise<Genera
     planByCourse.set(courseId, await ensurePlan(user.id, courseById.get(courseId) as CourseFields, today, lastDue));
   }
 
-  const outcomes: (CreatedItem | SkippedItem | FailedItem)[] = new Array(batch.length);
-  await pool(batch, CONCURRENCY, async (a, index) => {
+  const ones: One[] = batch.map((a) => ({
+    a,
+    course: courseById.get(a.course_id) as CourseFields,
+    planId: planByCourse.get(a.course_id) as string,
+    text: texts.get(a.id) as string,
+    oldTaskIds: input.regenerate ? (existing.get(a.id) ?? []) : [],
+    now,
+    timezone: user.timezone,
+    prefs,
+  }));
+  const failed = (o: One, error: unknown): FailedItem => ({
+    assignmentId: o.a.id,
+    name: o.a.name,
+    error: error instanceof Error ? error.message : String(error),
+  });
+
+  // What's already on the calendar, read before Claude is asked anything: a
+  // timetable that can't be read stops the request here, not after a minute's work.
+  const busy = await busyTimes(user, now, new Set(ones.flatMap((o) => o.oldTaskIds)));
+
+  // Claude plans them all at once, as it's the slow part.
+  const plans: (PlannedSubtask[] | FailedItem)[] = new Array(ones.length);
+  await pool(ones, CONCURRENCY, async (o, index) => {
     try {
-      const course = courseById.get(a.course_id) as CourseFields;
-      outcomes[index] = await generateOne({
-        a,
-        course,
-        planId: planByCourse.get(a.course_id) as string,
-        text: texts.get(a.id) as string,
-        oldTaskIds: input.regenerate ? (existing.get(a.id) ?? []) : [],
-        now,
-        timezone: user.timezone,
-        prefs,
-      });
+      plans[index] = await planOne(o);
     } catch (error) {
-      outcomes[index] = { assignmentId: a.id, name: a.name, error: error instanceof Error ? error.message : String(error) };
+      plans[index] = failed(o, error);
     }
   });
+
+  // Then they go on the calendar one at a time, soonest deadline first, each
+  // around everything already there, the subtasks placed before it included.
+  // Placed all at once, they'd all take the same evening.
+  const outcomes: (CreatedItem | SkippedItem | FailedItem)[] = [];
+  for (let index = 0; index < ones.length; index++) {
+    const o = ones[index];
+    const planned = plans[index];
+    if (!Array.isArray(planned)) {
+      outcomes.push(planned);
+      continue;
+    }
+    try {
+      outcomes.push(await saveOne(o, planned, busy));
+    } catch (error) {
+      outcomes.push(failed(o, error));
+    }
+  }
   for (const outcome of outcomes) {
     if ("count" in outcome) result.created.push(outcome);
     else if ("reason" in outcome) result.skipped.push(outcome);
@@ -160,12 +198,10 @@ interface One {
   prefs: StudyPrefs;
 }
 
-async function generateOne(o: One): Promise<CreatedItem | SkippedItem> {
+/** Claude's subtasks for one assessment: what to do, how long each takes, by when. */
+async function planOne(o: One): Promise<PlannedSubtask[]> {
   const { a, now, timezone } = o;
   const due = new Date(a.due_at as string);
-  const todayDate = localDate(now.getTime(), timezone);
-  const dueDate = localDate(due.getTime(), timezone);
-
   const context: SubtaskContext = {
     subject: [o.course.course_code, o.course.name].filter(Boolean).join(" "),
     name: a.name,
@@ -173,11 +209,17 @@ async function generateOne(o: One): Promise<CreatedItem | SkippedItem> {
     points: a.points_possible,
     dueLabel: label(due, timezone, true),
     todayLabel: label(now, timezone, false),
-    daysAvailable: daysBetween(todayDate, dueDate) + 1,
+    daysAvailable: daysBetween(localDate(now.getTime(), timezone), localDate(due.getTime(), timezone)) + 1,
     text: o.text,
   };
-  const planned = await planSubtasks(context);
-  const schedule = scheduleSubtasks(planned, { now, due, timezone, prefs: o.prefs });
+  return planSubtasks(context);
+}
+
+/** Puts one assessment's subtasks on the calendar around `busy`, saves them, and adds them to `busy`. */
+async function saveOne(o: One, planned: PlannedSubtask[], busy: Busy[]): Promise<CreatedItem | SkippedItem> {
+  const { a, now, timezone } = o;
+  const due = new Date(a.due_at as string);
+  const schedule = scheduleSubtasks(planned, { now, due, timezone, prefs: o.prefs, busy });
   // Not even one session fits before the deadline.
   if (schedule.tasks.length === 0) return { assignmentId: a.id, name: a.name, reason: "too_soon" };
 
@@ -186,6 +228,7 @@ async function generateOne(o: One): Promise<CreatedItem | SkippedItem> {
     .from("study_tasks")
     .insert(taskRows({ planId: o.planId, courseId: a.course_id, assignmentId: a.id }, schedule.tasks));
   if (error) throw dbError(`Couldn't save the subtasks for ${a.name}`, error);
+  busy.push(...schedule.tasks.map((t) => ({ start: t.start.getTime(), end: t.end.getTime(), study: true })));
 
   // New ones first, then the old: a failed save loses nothing.
   let replaced = 0;
@@ -289,6 +332,88 @@ async function existingSubtasks(userId: string, assignmentIds: string[]): Promis
     }
   }
   return found;
+}
+
+/** The student's own changes to their calendar, as lib/calendar/storage saves them in calendar_state. */
+interface CalendarChanges {
+  /** Changed fields by event id: a moved subtask's new start and end, say. null clears a field. */
+  edited?: Record<string, { start?: unknown; end?: unknown } | null>;
+  /** Events the student deleted from their calendar. */
+  removed?: string[];
+  /** Events the student made: on the grid, or as Kanban cards. */
+  added?: { id?: unknown; start?: unknown; end?: unknown }[];
+}
+
+/**
+ * Everything on the student's calendar from now on, where new subtasks must
+ * not go: their timetabled classes, the events they made themselves, and their
+ * study tasks, each where the student last put it (a dragged subtask is busy at
+ * its new time, a deleted one isn't), less the AI subtasks about to be
+ * replaced. A timetable link that can't be read stops the request rather than
+ * risk subtasks on top of classes.
+ */
+async function busyTimes(user: CurrentUser, now: Date, replacing: Set<string>): Promise<Busy[]> {
+  const db = supabaseAdmin();
+  const busy: Busy[] = [];
+  const add = (start: unknown, end: unknown, study: boolean) => {
+    const from = typeof start === "string" ? Date.parse(start) : NaN;
+    const to = typeof end === "string" ? Date.parse(end) : NaN;
+    if (Number.isFinite(from) && Number.isFinite(to) && to > now.getTime()) busy.push({ start: from, end: to, study });
+  };
+
+  // The student's own changes: made in the browser, saved per account by the calendar.
+  const { data: state, error: stateError } = await db
+    .from("calendar_state")
+    .select("changes")
+    .eq("user_id", user.authUserId)
+    .overrideTypes<{ changes: CalendarChanges | null }[], { merge: false }>();
+  if (stateError) throw dbError("Couldn't load the events you've added to your calendar", stateError);
+  const changes = state[0]?.changes ?? {};
+  const removed = new Set(Array.isArray(changes.removed) ? changes.removed : []);
+  const edited = changes.edited && typeof changes.edited === "object" ? changes.edited : {};
+  for (const ev of Array.isArray(changes.added) ? changes.added : []) {
+    if (!removed.has(String(ev?.id))) add(ev?.start, ev?.end, false);
+  }
+
+  // Study tasks in the database, AI and the student's own, at the time the student last gave them.
+  const { data: plans, error } = await db
+    .from("study_plans")
+    .select("id")
+    .eq("user_id", user.id)
+    .neq("status", "archived")
+    .overrideTypes<Pick<StudyPlanRow, "id">[], { merge: false }>();
+  if (error) throw dbError("Couldn't load your study plans", error);
+  for (const ids of chunk(plans.map((p) => p.id))) {
+    const { data, error: taskError } = await db
+      .from("study_tasks")
+      .select("id, scheduled_start, estimated_minutes")
+      .in("study_plan_id", ids)
+      .neq("status", "skipped")
+      .overrideTypes<Pick<StudyTaskRow, "id" | "scheduled_start" | "estimated_minutes">[], { merge: false }>();
+    if (taskError) throw dbError("Couldn't load your calendar", taskError);
+    for (const t of data) {
+      if (replacing.has(t.id) || removed.has(t.id)) continue;
+      const patch = edited[t.id] ?? {};
+      const start = "start" in patch ? patch.start : t.scheduled_start;
+      const end =
+        "end" in patch
+          ? patch.end
+          : typeof start === "string" && Number.isFinite(Date.parse(start))
+            ? new Date(Date.parse(start) + (t.estimated_minutes ?? 60) * 60_000).toISOString()
+            : null;
+      add(start, end, true);
+    }
+  }
+
+  const timetable = await getTimetableEvents(user.id, [], user.timezone);
+  if (timetable.error) {
+    throw new NotesError(
+      `${timetable.error}. Subtasks weren't added, so they can't land on a class: try again in a minute.`,
+      502,
+    );
+  }
+  for (const ev of timetable.events) add(ev.start, ev.end, false);
+  return busy;
 }
 
 async function loadPrefs(userId: string): Promise<StudyPrefs> {

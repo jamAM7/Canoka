@@ -7,6 +7,11 @@
 //
 //   - a study window each day (18:00-21:00 by default, at most 180 minutes),
 //     from the student's study_preferences if they have a row;
+//   - around what's already on the calendar (`busy`: other assessments'
+//     subtasks, classes), with a break either side of every session, and the
+//     day's study already planned counted against the daily limit;
+//   - spread out: one session of an assessment a day where they fit, two
+//     before any more, so a week's work doesn't land on one evening;
 //   - weekdays first; weekends only when the subtasks don't fit without them;
 //   - nothing before now (today's window starts at the next quarter hour) and
 //     nothing after the deadline (the due day's window ends at the deadline);
@@ -20,6 +25,9 @@ export const MIN_MINUTES = 15;
 export const MAX_MINUTES = 180;
 const MAX_DAYS = 120;
 const QUARTER_HOUR_MS = 15 * 60_000;
+/** Kept free before and after every session, between it and anything else on the calendar. */
+const BREAK_MS = 15 * 60_000;
+const FIVE_MINUTES_MS = 5 * 60_000;
 
 export interface StudyPrefs {
   /** Study window, in minutes after local midnight. */
@@ -96,129 +104,223 @@ export interface Schedule {
   usedWeekend: boolean;
 }
 
+/** Time already taken on the calendar, as epoch ms. */
+export interface Busy {
+  start: number;
+  end: number;
+  /** Study (another subtask), which counts towards the day's study limit; a class doesn't. */
+  study: boolean;
+}
+
 export interface ScheduleOptions {
   now: Date;
   due: Date;
   timezone: string;
   prefs: StudyPrefs;
+  /** What's on the calendar already, to schedule around. */
+  busy?: Busy[];
 }
 
-interface Slot {
+/** One day's study window. */
+interface Window {
   date: string;
-  /** Epoch ms of the day's first session. */
+  /** Epoch ms: no earlier than now, no later than the deadline. */
   start: number;
-  minutes: number;
+  end: number;
+  /** Study minutes still allowed that day, after the study already on the calendar. */
+  allowance: number;
   preferred: boolean;
 }
 
-export function scheduleSubtasks(planned: PlannedSubtask[], options: ScheduleOptions): Schedule {
-  const { now, due, timezone } = options;
-  const today = localDate(now.getTime(), timezone);
-  const lastDate = localDate(due.getTime(), timezone);
-  const all = slotsBetween(today, lastDate, options);
-  if (planned.length === 0 || all.length === 0) {
-    return { tasks: [], tight: false, dropped: planned.length, usedWeekend: false };
-  }
-
-  const weekdays = all.filter((s) => s.preferred);
-  const tries: { slots: Slot[]; shrink: boolean }[] = [{ slots: weekdays, shrink: false }];
-  if (weekdays.length < all.length) tries.push({ slots: all, shrink: false });
-  tries.push({ slots: all, shrink: true });
-
-  let last: Placement | null = null;
-  for (const { slots, shrink } of tries) {
-    if (slots.length === 0) continue;
-    if (!shrink) {
-      const placement = place(planned, planned.map((p) => p.minutes), slots, lastDate);
-      if (placement.dropped === 0) return finish(planned, placement, slots, false);
-      continue;
-    }
-    // Shorten every session by the same factor until they all fit.
-    const capacity = slots.reduce((sum, s) => sum + s.minutes, 0);
-    const total = planned.reduce((sum, p) => sum + clamp(p.minutes, MIN_MINUTES, MAX_MINUTES), 0);
-    for (let factor = Math.min(1, (0.9 * capacity) / total); factor >= 0.3; factor -= 0.1) {
-      const placement = place(planned, planned.map((p) => p.minutes * factor), slots, lastDate);
-      last = placement;
-      if (placement.dropped === 0) return finish(planned, placement, slots, true);
-    }
-    return finish(planned, last as Placement, slots, true);
-  }
-  return { tasks: [], tight: true, dropped: planned.length, usedWeekend: false };
+interface Placed {
+  window: number;
+  start: number;
+  end: number;
 }
 
 interface Placement {
-  /** The slot index each subtask went in, or null if it didn't fit. */
-  slotOf: (number | null)[];
+  /** Where each subtask went, or null if it didn't fit. */
+  placed: (Placed | null)[];
   minutes: number[];
   dropped: number;
 }
 
-/** Places subtasks from the last to the first, each on its target day or earlier, never after the one that follows. */
-function place(planned: PlannedSubtask[], wanted: number[], slots: Slot[], lastDate: string): Placement {
-  const longest = Math.max(...slots.map((s) => s.minutes));
+export function scheduleSubtasks(planned: PlannedSubtask[], options: ScheduleOptions): Schedule {
+  const { now, due, timezone } = options;
+  const busy = options.busy ?? [];
+  const today = localDate(now.getTime(), timezone);
+  const lastDate = localDate(due.getTime(), timezone);
+  const all = windowsBetween(today, lastDate, options, busy);
+  if (planned.length === 0 || all.length === 0) {
+    return { tasks: [], tight: false, dropped: planned.length, usedWeekend: false };
+  }
+
+  // Spread out first: one session a day on study days, then two, then weekends too, then as many as fit.
+  const weekdays = all.filter((w) => w.preferred);
+  const tries: { windows: Window[]; perDay: number }[] = [
+    { windows: weekdays, perDay: 1 },
+    { windows: weekdays, perDay: 2 },
+  ];
+  if (weekdays.length < all.length) tries.push({ windows: all, perDay: 1 }, { windows: all, perDay: 2 });
+  tries.push({ windows: all, perDay: Infinity });
+
+  for (const { windows, perDay } of tries) {
+    if (windows.length === 0) continue;
+    const placement = place(planned, planned.map((p) => p.minutes), windows, lastDate, busy, perDay);
+    if (placement.dropped === 0) return finish(planned, placement, windows, false);
+  }
+
+  // Shorten every session by the same factor until they all fit.
+  const capacity = all.reduce((sum, w) => sum + w.allowance, 0);
+  const total = planned.reduce((sum, p) => sum + clamp(p.minutes, MIN_MINUTES, MAX_MINUTES), 0);
+  let last: Placement | null = null;
+  for (let factor = Math.min(1, (0.9 * capacity) / total); factor >= 0.3; factor -= 0.1) {
+    last = place(planned, planned.map((p) => p.minutes * factor), all, lastDate, busy, Infinity);
+    if (last.dropped === 0) return finish(planned, last, all, true);
+  }
+  return last ? finish(planned, last, all, true) : { tasks: [], tight: true, dropped: planned.length, usedWeekend: false };
+}
+
+/**
+ * Places subtasks from the last to the first, each on its target day or
+ * earlier, never after the one that follows (on its day, it ends a break
+ * before it starts), at most `perDay` of them on one day. Each goes as late in
+ * its day as fits, so the ones before it can still fit earlier that day; then
+ * each day's sessions are moved back to the earliest free times, in order.
+ */
+function place(
+  planned: PlannedSubtask[],
+  wanted: number[],
+  windows: Window[],
+  lastDate: string,
+  busy: Busy[],
+  perDay: number,
+): Placement {
+  const longest = Math.max(...windows.map((w) => (w.end - w.start) / 60_000));
   const minutes = wanted.map((m) => clamp(Math.round(m / 5) * 5, MIN_MINUTES, Math.min(MAX_MINUTES, longest)));
-  const remaining = slots.map((s) => s.minutes);
-  const slotOf: (number | null)[] = planned.map(() => null);
-  let ceiling = slots.length - 1;
+  const taken = busy.map((b) => ({ start: b.start, end: b.end }));
+  const allowance = windows.map((w) => w.allowance);
+  const count = windows.map(() => 0);
+  const placed: (Placed | null)[] = planned.map(() => null);
+  let ceiling = windows.length - 1;
+  let ceilingEnd = Infinity;
 
   for (let i = planned.length - 1; i >= 0; i--) {
     const target = addDays(lastDate, -Math.max(0, planned[i].daysBeforeDue));
-    // The latest slot on or before the target day, or the first slot if the target is earlier than any.
-    let from = slots.reduce((found, s, index) => (s.date <= target ? index : found), 0);
-    from = Math.min(from, ceiling);
+    // The latest window on or before the target day, or the first if the target is earlier than any.
+    const from = Math.min(ceiling, windows.reduce((found, w, index) => (w.date <= target ? index : found), 0));
+    // Its target day and earlier first; later than its target beats not at all, if not past the next subtask.
+    const order = [...range(from, 0), ...(from < ceiling ? range(from + 1, ceiling) : [])];
 
-    let chosen: number | null = null;
-    for (let j = from; j >= 0 && chosen === null; j--) if (remaining[j] >= minutes[i]) chosen = j;
-    // Earlier days are full: later than its target is better than not at all, as long as it's not past the next subtask.
-    for (let j = from + 1; j <= ceiling && chosen === null; j++) if (remaining[j] >= minutes[i]) chosen = j;
-
-    if (chosen !== null) {
-      remaining[chosen] -= minutes[i];
-      slotOf[i] = chosen;
-      ceiling = chosen;
+    for (const j of order) {
+      const length = minutes[i] * 60_000;
+      if (count[j] >= perDay || allowance[j] < minutes[i]) continue;
+      const until = j === ceiling ? Math.min(windows[j].end, ceilingEnd) : windows[j].end;
+      const start = lastFree(windows[j].start, until, length, taken);
+      if (start === null) continue;
+      placed[i] = { window: j, start, end: start + length };
+      taken.push({ start, end: start + length });
+      allowance[j] -= minutes[i];
+      count[j] += 1;
+      ceiling = j;
+      ceilingEnd = start - BREAK_MS;
+      break;
     }
   }
-  return { slotOf, minutes, dropped: slotOf.filter((s) => s === null).length };
+
+  // Back to the start of each day's window, in order. Taking the earliest free time in turn
+  // can't fail where the latest did, and each session only moves earlier.
+  const others = busy.map((b) => ({ start: b.start, end: b.end }));
+  windows.forEach((w, j) => {
+    const today = placed.flatMap((spot, i) => (spot?.window === j ? [i] : []));
+    // Each after the one before it, so a short one can't slip into a gap ahead of it.
+    let cursor = w.start;
+    for (const i of today) {
+      const spot = placed[i] as Placed;
+      const length = spot.end - spot.start;
+      const start = firstFree(cursor, spot.end, length, others) ?? spot.start;
+      placed[i] = { window: j, start, end: start + length };
+      others.push({ start, end: start + length });
+      cursor = start + length + BREAK_MS;
+    }
+  });
+  return { placed, minutes, dropped: placed.filter((p) => p === null).length };
 }
 
-function finish(planned: PlannedSubtask[], placement: Placement, slots: Slot[], tight: boolean): Schedule {
+/** The latest start, on a five-minute mark, for `length` ms between `from` and `until` with a break clear of everything taken. */
+function lastFree(from: number, until: number, length: number, taken: { start: number; end: number }[]): number | null {
+  const candidates = [until - length, ...taken.map((t) => t.start - BREAK_MS - length)]
+    .map((c) => Math.floor(c / FIVE_MINUTES_MS) * FIVE_MINUTES_MS)
+    .filter((c) => c >= from && c + length <= until)
+    .sort((a, b) => b - a);
+  for (const start of candidates) {
+    const clear = taken.every((t) => start >= t.end + BREAK_MS || start + length + BREAK_MS <= t.start);
+    if (clear) return start;
+  }
+  return null;
+}
+
+/** The earliest start, on a five-minute mark, for `length` ms between `from` and `until` with a break clear of everything taken. */
+function firstFree(from: number, until: number, length: number, taken: { start: number; end: number }[]): number | null {
+  const candidates = [from, ...taken.map((t) => t.end + BREAK_MS)]
+    .map((c) => Math.ceil(c / FIVE_MINUTES_MS) * FIVE_MINUTES_MS)
+    .filter((c) => c >= from && c + length <= until)
+    .sort((a, b) => a - b);
+  for (const start of candidates) {
+    const clear = taken.every((t) => start >= t.end + BREAK_MS || start + length + BREAK_MS <= t.start);
+    if (clear) return start;
+  }
+  return null;
+}
+
+function finish(planned: PlannedSubtask[], placement: Placement, windows: Window[], tight: boolean): Schedule {
   const tasks: ScheduledSubtask[] = [];
-  const cursor = slots.map((s) => s.start);
-  // Within a day the subtasks run back to back from the window's start, in order.
   planned.forEach((p, i) => {
-    const j = placement.slotOf[i];
-    if (j === null) return;
-    const start = cursor[j];
-    const end = start + placement.minutes[i] * 60_000;
-    cursor[j] = end;
+    const spot = placement.placed[i];
+    if (!spot) return;
     tasks.push({
       order: tasks.length + 1,
       title: p.title,
       description: p.description,
       minutes: placement.minutes[i],
-      start: new Date(start),
-      end: new Date(end),
-      date: slots[j].date,
+      start: new Date(spot.start),
+      end: new Date(spot.end),
+      date: windows[spot.window].date,
     });
   });
-  const usedWeekend = placement.slotOf.some((j) => j !== null && !slots[j].preferred);
+  const usedWeekend = placement.placed.some((spot) => spot !== null && !windows[spot.window].preferred);
   return { tasks, tight: tight || placement.dropped > 0, dropped: placement.dropped, usedWeekend };
 }
 
-/** The study window of each day from `first` to `last`, trimmed to start no earlier than now and end no later than the deadline. */
-function slotsBetween(first: string, last: string, { now, due, timezone, prefs }: ScheduleOptions): Slot[] {
-  const slots: Slot[] = [];
+/**
+ * The study window of each day from `first` to `last`, trimmed to start no
+ * earlier than now and end no later than the deadline, less the study already
+ * planned that day.
+ */
+function windowsBetween(first: string, last: string, { now, due, timezone, prefs }: ScheduleOptions, busy: Busy[]): Window[] {
+  const windows: Window[] = [];
   for (let date = first, n = 0; date <= last && n < MAX_DAYS; date = addDays(date, 1), n++) {
     let start = localToInstant(date, prefs.startMinutes, timezone);
     let end = localToInstant(date, prefs.endMinutes, timezone);
     if (date === first) start = Math.max(start, Math.ceil(now.getTime() / QUARTER_HOUR_MS) * QUARTER_HOUR_MS);
     if (date === last) end = Math.min(end, due.getTime());
-    const minutes = Math.min(prefs.maxDailyMinutes, Math.floor((end - start) / 60_000));
-    if (minutes >= MIN_MINUTES) {
-      slots.push({ date, start, minutes, preferred: prefs.studyDays.includes(isoWeekday(date)) });
+    const studied = busy
+      .filter((b) => b.study && localDate(b.start, timezone) === date)
+      .reduce((sum, b) => sum + (b.end - b.start) / 60_000, 0);
+    const allowance = Math.min(prefs.maxDailyMinutes - studied, Math.floor((end - start) / 60_000));
+    if (allowance >= MIN_MINUTES) {
+      windows.push({ date, start, end, allowance, preferred: prefs.studyDays.includes(isoWeekday(date)) });
     }
   }
-  return slots;
+  return windows;
+}
+
+/** from, from±1, ... to, either direction. */
+function range(from: number, to: number): number[] {
+  const step = from <= to ? 1 : -1;
+  const out: number[] = [];
+  for (let i = from; step > 0 ? i <= to : i >= to; i += step) out.push(i);
+  return out;
 }
 
 // ---------------------------------------------------------------- dates and zones

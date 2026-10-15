@@ -11,7 +11,8 @@
 // course_modules row, from `subjects[].weeks[].moduleId`). `content` is a
 // TipTap document. Errors are { error: string } with 400 (bad body), 404
 // (not the student's subject, week or note), 413 (note too long) or 500.
-// lib/guard only checks the request came from this app; there is no sign-in yet.
+// lib/guard checks the request came from this app; the notes are the signed-in
+// student's (lib/data/user), and a signed-out request gets 401.
 import { NextResponse } from "next/server";
 import { requireSameOrigin } from "@/lib/guard";
 import { currentUser } from "@/lib/data/user";

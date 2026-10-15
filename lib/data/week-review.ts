@@ -1,12 +1,13 @@
 import "server-only";
 import { reviewNotes, type NotesReview } from "@/lib/ai/review";
-import { COVERAGE_PREFIX, weekItems } from "@/lib/canvas/week";
+import { COVERAGE_PREFIX, weekItems, weekRows } from "@/lib/canvas/week";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type { CourseContentRow, CourseRow, NoteRow, WeekReviewRow } from "@/lib/supabase/types";
 import { docText } from "@/lib/notes/text";
 import type { WeekReviewDto } from "@/lib/notes/types";
 import type { LearningProfile } from "@/lib/user/learning-profile";
 import { canvasClientFor } from "./canvas-connection";
+import { registerFiles, storedFiles } from "./canvas-files";
 import { dbError } from "./db-error";
 import { NotesError, isUuid } from "./notes";
 import type { CurrentUser } from "./user";
@@ -17,7 +18,8 @@ import { weekModuleIds, weekModules } from "./week-modules";
 //
 //   1. check the request and the week's notes (cheap, before anything slow)
 //   2. fetch the week from Canvas (lib/canvas/week), signed in with the
-//      student's saved connection, and save it as course_content
+//      student's saved connection, add the text of its files that a sync has
+//      read (lib/data/canvas-files), and save it all as course_content
 //   3. read the week's notes and content back from the database
 //   4. have Claude compare them, and save the result in week_reviews
 //
@@ -115,8 +117,11 @@ export async function reviewWeek(user: Pick<CurrentUser, "id" | "timezone">, inp
     try {
       const client = await canvasClientFor(userId);
       if (client) {
-        const items = await weekItems(client, course.external_course_id, week, user.timezone);
-        await saveWeekContent(courseId, group.canonical.id, items);
+        const fetched = await weekItems(client, course.external_course_id, week, user.timezone);
+        // A file found here for the first time is read by the next sync.
+        await registerFiles(courseId, fetched.files);
+        const texts = await storedFiles(courseId, fetched.files.map((f) => f.id));
+        await saveWeekContent(courseId, group.canonical.id, weekRows(fetched, texts));
       } else {
         staleReason = "Canvas isn't connected, so this used the content saved earlier. Connect it in Settings.";
       }

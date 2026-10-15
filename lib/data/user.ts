@@ -1,40 +1,65 @@
 import "server-only";
 import { cache } from "react";
-import { SupabaseConfigError, supabaseAdmin } from "@/lib/supabase/server";
+import type { User } from "@supabase/supabase-js";
+import { createClient, supabaseAdmin } from "@/lib/supabase/server";
 import type { UserRow } from "@/lib/supabase/types";
+import { dbError } from "./db-error";
+import { NotesError } from "./notes";
 
-// The signed-in student. There's no sign-in yet, so it's the shared dev user
-// whose public.users.id is SUPABASE_USER_ID. Once Supabase Auth exists, look
-// the row up by users.auth_user_id instead; everything downstream already
-// takes public.users.id.
+// The signed-in student: the public.users row for the Supabase Auth account
+// whose session cookie came with the request (sign-in is /sign-up, and
+// middleware.ts keeps the app's pages behind it). An account's row is made the
+// first time it signs in, so each person starts with their own subjects, notes
+// and Canvas connection. Everything downstream takes public.users.id.
 
 export interface CurrentUser {
   /** public.users.id: what notes, enrolments and plans reference. */
   id: string;
+  /** The Supabase Auth account's id: what per-account tables like calendar_state and profiles key on. */
+  authUserId: string;
   email: string;
   fullName: string | null;
   timezone: string;
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+type UserFields = Pick<UserRow, "id" | "email" | "full_name" | "timezone">;
+const COLUMNS = "id, email, full_name, timezone";
 
-/** Once per request, however many server components ask. */
+/** Once per request, however many server components ask. Throws a 401 NotesError when signed out. */
 export const currentUser = cache(async (): Promise<CurrentUser> => {
-  const id = process.env.SUPABASE_USER_ID?.trim();
-  if (!id || !UUID.test(id)) {
-    throw new SupabaseConfigError(
-      "Set SUPABASE_USER_ID in .env.local to the dev user's public.users.id (ask the team for the shared one).",
-    );
-  }
+  const { data } = await createClient().auth.getUser();
+  if (!data.user) throw new NotesError("Sign in first.", 401);
+  const row = (await userFor(data.user.id)) ?? (await addUser(data.user));
+  return { id: row.id, authUserId: data.user.id, email: row.email, fullName: row.full_name, timezone: row.timezone };
+});
 
+async function userFor(authUserId: string): Promise<UserFields | null> {
   const { data, error } = await supabaseAdmin()
     .from("users")
-    .select("id, email, full_name, timezone")
-    .eq("id", id)
-    .overrideTypes<Pick<UserRow, "id" | "email" | "full_name" | "timezone">[], { merge: false }>();
-  if (error) throw new Error(`Couldn't load the current user: ${error.message}`);
-  const row = data[0];
-  if (!row) throw new SupabaseConfigError(`No public.users row has id ${id}. Check SUPABASE_USER_ID.`);
+    .select(COLUMNS)
+    .eq("auth_user_id", authUserId)
+    .overrideTypes<UserFields[], { merge: false }>();
+  if (error) throw dbError("Couldn't load your account", error);
+  return data[0] ?? null;
+}
 
-  return { id: row.id, email: row.email, fullName: row.full_name, timezone: row.timezone };
-});
+/**
+ * The account's first request: its own row, empty. An upsert, so two first
+ * requests at once make one row (a unique index on auth_user_id), and it
+ * returns the row. Looking it up again instead would get userFor's first,
+ * empty answer back: in a page render Next memoizes identical GET requests.
+ */
+async function addUser(account: User): Promise<UserFields> {
+  const fullName = typeof account.user_metadata?.full_name === "string" ? account.user_metadata.full_name.trim() : "";
+  const { data, error } = await supabaseAdmin()
+    .from("users")
+    .upsert(
+      { auth_user_id: account.id, email: account.email ?? `${account.id}@accounts.canoka`, full_name: fullName || null },
+      { onConflict: "auth_user_id" },
+    )
+    .select(COLUMNS)
+    .overrideTypes<UserFields[], { merge: false }>();
+  if (error) throw dbError("Couldn't set up your account", error);
+  if (!data[0]) throw new Error("Couldn't set up your account: Supabase didn't return its row.");
+  return data[0];
+}
