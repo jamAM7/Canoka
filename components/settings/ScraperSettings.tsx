@@ -27,7 +27,7 @@ const HEADING = "mb-2 block text-xs font-semibold uppercase tracking-wide text-t
 const FIELD =
   "w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary-light focus:shadow-focus focus:outline-none";
 const PRIMARY_BUTTON =
-  "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50";
+  "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50";
 const SECONDARY_BUTTON =
   "rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text transition-colors hover:border-primary-light hover:bg-surface-muted";
 /** Output kept on the page, as on the server. */
@@ -100,6 +100,29 @@ export function ScraperSettings({ setup, lastScrape, progress }: Props) {
     next.current = data.next;
   };
 
+  // Saves what a scrape found to the database, so Notes can list its subjects and weeks.
+  const syncToDatabase = async () => {
+    const say = (text: string, stderr = false) =>
+      setLines((prev) => [...prev, { text, stderr }].slice(-MAX_LINES));
+    say("Saving the subjects to the database…");
+    try {
+      const res = await fetch("/api/canvas/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const data = await res.json();
+      for (const s of data.synced ?? []) {
+        say(`Saved ${s.code ?? s.name}: ${s.weeks} weeks, ${s.assignments} assessments.`);
+        for (const warning of s.warnings) say(warning, true);
+      }
+      for (const e of data.errors ?? []) say(`Couldn't save ${e.subject}: ${e.error}`, true);
+      if (!res.ok && !data.errors) say(`Couldn't save the subjects: ${data.error}`, true);
+    } catch {
+      say("Couldn't reach the app's server to save the subjects.", true);
+    }
+  };
+
   // Follow a running scrape's output, then reload the page's data when it ends.
   useEffect(() => {
     if (!run || run.status !== "running") return;
@@ -120,6 +143,7 @@ export function ScraperSettings({ setup, lastScrape, progress }: Props) {
         }
         show(data, data.run.id === id);
         if (data.run.status !== "running") {
+          if (data.run.status === "succeeded") await syncToDatabase();
           router.refresh();
           return;
         }
@@ -188,7 +212,7 @@ export function ScraperSettings({ setup, lastScrape, progress }: Props) {
   };
 
   return (
-    <section className="rounded-xl border border-border bg-surface shadow-sm">
+    <section id="canvas" className="rounded-xl border border-border bg-surface shadow-sm">
       <div className="space-y-5 p-5">
         <h2 className="text-xl font-semibold text-text">Canvas scraper</h2>
 
@@ -223,7 +247,10 @@ export function ScraperSettings({ setup, lastScrape, progress }: Props) {
             />
             <span className="mt-1 block text-xs text-text-muted">
               Make one in Canvas under Account › Settings › New access token. It&apos;s saved in
-              scraper/.env on this computer.
+              scraper/.env on this computer.{" "}
+              <Link href="/settings/canvas-token" className="font-medium text-primary hover:underline">
+                How to get one
+              </Link>
             </span>
           </label>
           <div className="flex flex-wrap items-center gap-3">
@@ -447,7 +474,7 @@ export function ScraperSettings({ setup, lastScrape, progress }: Props) {
               const el = e.currentTarget;
               stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
             }}
-            className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md bg-black p-4 font-mono text-xs leading-relaxed text-surface-muted"
+            className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md bg-black p-4 font-mono text-xs leading-relaxed text-white"
           >
             <span className="text-primary-light">$ {run.command}</span>
             {"\n"}

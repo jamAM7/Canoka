@@ -1,60 +1,87 @@
 import type { Config } from "tailwindcss";
 
+/** A colour from styles/variables.css's --rgb-* triplets, with Tailwind's opacity. */
+const token = (name: string) => `rgb(var(--rgb-${name}) / <alpha-value>)`;
+
 const config: Config = {
-  // Files Tailwind will scan for class names. Keep this list up-to-date
-  // when adding new folders or file types so unused styles are purged.
+  // Files Tailwind will scan for class names. Keep this list up-to-date when adding new folders or
+  // file types so unused styles are purged
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./styles/**/*.css",
   ],
-  // Centralized design tokens. These values are referenced throughout the
-  // app via Tailwind utilities (e.g. `text-primary`, `bg-surface`, `p-4`).
-  // Update here to keep styling consistent across components.
+  // Centralised design tokens. These values are referenced throughout the app via Tailwind utilities
+  // (e.g. `text-primary`, `bg-surface`, `p-4`). Update here to keep styling consistent across components
+
   theme: {
     extend: {
-      // Color palette (semantic + brand). Prefer semantic names in
-      // components (primary, surface, border) so tokens can swap easily.
+      // Color palette (semantic + brand). Prefer semantic names in components
+      // (primary, surface, border) so tokens can swap easily. Values live in
+      // styles/variables.css; `token()` keeps opacity modifiers working.
       colors: {
-        primary: "#023047",
-        "primary-light": "#8ECAE6",
-        "primary-dark": "#012536",
-        secondary: "#FFB703",
-        "secondary-dark": "#FB8500",
-        accent: "#E26D5C",
-        "accent-muted": "#C9CBA3",
-        success: "#5F8A62",
-        warning: "#FFB703",
-        error: "#C94C4C",
-        info: "#8ECAE6",
-        text: "#0C0C20",
-        "text-muted": "#62626D",
-        "text-light": "#8A8A92",
-        background: "#F6FAF9",
-        surface: "#FFFFFF",
-        "surface-muted": "#EEF3F3",
-        border: "#D9DFDF",
-        "border-light": "#E8ECEC",
-        // Calendar grid lines (week hours/days, month cells): darker than
-        // `border` so the grid stays readable on the `background` colour.
-        "border-strong": "#CBD3D3",
-        white: "#FFFFFF",
-        black: "#0C0C20",
-        brand: "#023047",
-        brandSoft: "#8ECAE6",
-        brandDeep: "#012536",
-        shell: "#F6FAF9",
-        panel: "#FFFFFF",
-        panelMuted: "#EEF3F3",
-        ink: "#0C0C20",
-        inkMuted: "#62626D",
-        inkLight: "#8A8A92",
-        line: "#D9DFDF",
-        lineSoft: "#E8ECEC",
+        primary: token("primary"),
+        "primary-light": token("primary-light"),
+        "primary-dark": token("primary-dark"),
+        "on-primary": token("on-primary"),
+        secondary: token("secondary"),
+        "secondary-dark": token("secondary-dark"),
+        accent: token("accent"),
+        "accent-muted": token("accent-muted"),
+        success: token("success"),
+        warning: token("warning"),
+        error: token("error"),
+        info: token("info"),
+        text: token("text"),
+        "text-muted": token("text-muted"),
+        "text-light": token("text-light"),
+        background: token("background"),
+        surface: token("surface"),
+        "surface-muted": token("surface-muted"),
+        border: token("border"),
+        "border-light": token("border-light"),
+        "border-strong": token("border-strong"),
+        white: token("white"),
+        black: token("black"),
+        brand: token("primary"),
+        brandSoft: token("primary-light"),
+        brandDeep: token("primary-dark"),
+        shell: token("background"),
+        panel: token("surface"),
+        panelMuted: token("surface-muted"),
+        ink: token("text"),
+        inkMuted: token("text-muted"),
+        inkLight: token("text-light"),
+        line: token("border"),
+        lineSoft: token("border-light"),
+
+        // Course / assessment colours. These match the shared calendar palette so
+        // cards, pills, and event blocks reuse the same token family without a
+        // duplicate file of hard-coded values.
+        course: {
+          blue: "var(--color-course-blue)",
+          "blue-soft": "var(--color-course-blue-soft)",
+          "blue-border": "var(--color-course-blue-border)",
+          violet: "var(--color-course-violet)",
+          "violet-soft": "var(--color-course-violet-soft)",
+          "violet-border": "var(--color-course-violet-border)",
+          emerald: "var(--color-course-emerald)",
+          "emerald-soft": "var(--color-course-emerald-soft)",
+          "emerald-border": "var(--color-course-emerald-border)",
+          amber: "var(--color-course-amber)",
+          "amber-soft": "var(--color-course-amber-soft)",
+          "amber-border": "var(--color-course-amber-border)",
+          rose: "var(--color-course-rose)",
+          "rose-soft": "var(--color-course-rose-soft)",
+          "rose-border": "var(--color-course-rose-border)",
+          cyan: "var(--color-course-cyan)",
+          "cyan-soft": "var(--color-course-cyan-soft)",
+          "cyan-border": "var(--color-course-cyan-border)",
+        },
       },
       spacing: {
-        // Common spacing scale used across layouts and components. Add
-        // descriptive tokens (e.g. `sidebar`, `navbar`) for fixed dims.
+        // Common spacing scale used across layouts and components.
+        // Add descriptive tokens (e.g. `sidebar`, `navbar`) for fixed dimensions
         1: "0.25rem",
         2: "0.5rem",
         3: "0.75rem",
@@ -66,15 +93,15 @@ const config: Config = {
         12: "3rem",
         16: "4rem",
         20: "5rem",
-        sidebar: "240px",
+        sidebar: "200px",
         navbar: "72px",
       },
       fontFamily: {
-        // We use the Karla variable injected by next/font. Keep only
-        // Karla + a generic fallback to avoid unexpected font swaps.
-        sans: ["var(--font-karla)", "Karla", "sans-serif"],
-        body: ["var(--font-karla)", "Karla", "sans-serif"],
-        heading: ["var(--font-karla)", "Karla", "sans-serif"],
+        // Fonts injected by next/font: Poppins for body text, Sintony for
+        // headings (h1–h6 pick it up from styles.css).
+        sans: ["var(--font-poppins)", "Poppins", "sans-serif"],
+        body: ["var(--font-poppins)", "Poppins", "sans-serif"],
+        heading: ["var(--font-sintony)", "Sintony", "sans-serif"],
       },
       fontSize: {
         // Font-size scale (value + line-height). Use `text-sm`, `text-lg` etc.
@@ -109,11 +136,11 @@ const config: Config = {
         pill: "999px",
       },
       boxShadow: {
-        // Reusable shadows: `shadow-sm`, `shadow-md`, `shadow-focus`.
+        // Reusable shadows: `shadow-sm`, `shadow-md`, `shadow-focus` if we use (I don't think these are of use atm)
         sm: "0 1px 2px rgba(2, 48, 71, 0.06)",
         md: "0 4px 12px rgba(2, 48, 71, 0.08)",
         lg: "0 10px 25px rgba(2, 48, 71, 0.12)",
-        focus: "0 0 0 3px rgba(142, 202, 230, 0.45)",
+        focus: "0 0 0 3px rgb(var(--rgb-primary-light) / 0.45)",
       },
       letterSpacing: {
         tight: "-0.02em",

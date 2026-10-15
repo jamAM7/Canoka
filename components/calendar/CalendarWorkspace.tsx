@@ -30,7 +30,7 @@ import {
   setColumnStatus,
 } from "@/lib/calendar/kanban";
 import { loadCalendar, saveCalendar } from "@/lib/calendar/storage";
-import { Sidebar } from "@/components/shell/Sidebar";
+import { NavBar } from "@/components/shell/NavBar";
 import { CalendarToolbar } from "./CalendarToolbar";
 import { WeekView } from "./WeekView";
 import { MonthView } from "./MonthView";
@@ -41,11 +41,13 @@ import { EventDetail } from "./EventDetail";
 interface Props {
   events: CalendarEvent[];
   courses: Course[];
+  /** A problem to show above the views, such as a timetable feed that didn't load. */
+  notice?: string;
 }
 
 const ALL_TYPES: CalendarEventType[] = ["class", "assessment", "task"];
 
-export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
+export function CalendarWorkspace({ events: initialEvents, courses, notice }: Props) {
   const [events, setEvents] = useState(initialEvents);
   const [view, setView] = useState<CalendarViewMode>("week");
   const [anchor, setAnchor] = useState<Date>(new Date());
@@ -66,10 +68,13 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
       if (saved) {
         setEvents(saved.events);
         setBoard(saved.board);
+      } else {
+        // Nothing saved for this student: include events that arrive after a refresh.
+        setEvents(initialEvents);
       }
       setRestored(true);
     })();
-  }, []);
+  }, [initialEvents]);
 
   useEffect(() => {
     if (!restored) return;
@@ -198,7 +203,7 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
       return { title: format(anchor, "MMMM"), subtitle: format(anchor, "yyyy") };
     }
     if (view === "kanban") {
-      return { title: "Kanban Board" };
+      return { title: "Kanban Board", subtitle: "" };
     }
     const s = startOfWeek(anchor, WEEK_OPTS);
     const e = endOfWeek(anchor, WEEK_OPTS);
@@ -210,8 +215,8 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
   }, [view, anchor]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar active="calendar" calendarView={view} onCalendarViewChange={setView} />
+    <div className="flex h-screen flex-col overflow-hidden bg-background">
+      <NavBar active="calendar" />
 
       {/* min-w-0 on Kanban keeps a board wider than the screen scrolling inside
           itself instead of stretching the page past the viewport. */}
@@ -221,6 +226,8 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
           onPrev={() => shift(-1)}
           onNext={() => shift(1)}
           onToday={() => setAnchor(new Date())}
+          view={view}
+          onViewChange={setView}
           showNav={view !== "kanban"}
           courses={courses}
           hiddenCourses={hiddenCourses}
@@ -231,6 +238,8 @@ export function CalendarWorkspace({ events: initialEvents, courses }: Props) {
           hiddenTypes={hiddenTypes}
           onToggleType={(t) => setHiddenTypes((s) => toggle(s, t))}
         />
+
+        {notice && <p className="border-b border-border px-6 py-2 text-sm text-error">{notice}</p>}
 
         {/* A flex column, so each view can fill the remaining height and scroll inside it. */}
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">

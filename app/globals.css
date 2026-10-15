@@ -12,19 +12,19 @@ body {
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-background text-text antialiased;
 }
 
 /* Thin scrollbars for the calendar scroll areas */
 .cb-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgb(203 213 225) transparent;
+  scrollbar-color: var(--color-border-dark) transparent;
 }
 .cb-scroll::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 .cb-scroll::-webkit-scrollbar-thumb {
-  background-color: rgb(203 213 225);
+  background-color: var(--color-border-dark);
   border-radius: 9999px;
 }

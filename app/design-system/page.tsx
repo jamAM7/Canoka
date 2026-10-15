@@ -1,5 +1,5 @@
 // Reference page for the Tailwind theme in tailwind.config.ts. Not linked from
-// the sidebar; open /design-system directly.
+// the nav; open /design-system directly.
 export const metadata = { title: "Design system · Canoka" };
 
 export default function DesignSystemPage() {

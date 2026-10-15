@@ -10,7 +10,7 @@ import type {
 } from "@/types/calendar";
 import { STATUS_META, STATUS_ORDER, typeLabel } from "@/lib/calendar/event-utils";
 import { checklistProgress } from "@/lib/calendar/kanban";
-import { courseTone } from "@/lib/calendar/colors";
+import { courseTone } from "@/types/calendar";
 import { ChecklistIcon, MoreIcon, NotesIcon, PlusIcon } from "@/components/shell/icons";
 import { PriorityTag } from "./PriorityTag";
 
@@ -37,7 +37,7 @@ interface Props {
 type DropTarget = { columnId: string; beforeId: string | null };
 
 const PRIMARY_BTN =
-  "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-dark";
+  "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary transition-colors hover:bg-primary-dark";
 const GHOST_BTN =
   "rounded-md px-3 py-1.5 text-sm font-medium text-text-muted transition-colors hover:bg-surface hover:text-text";
 const FIELD =

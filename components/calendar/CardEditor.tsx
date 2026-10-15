@@ -10,7 +10,7 @@ import type {
 } from "@/types/calendar";
 import { isScheduled, rescheduleEvent, typeLabel, type ScheduledEvent } from "@/lib/calendar/event-utils";
 import { PRIORITY_META, PRIORITY_ORDER, checklistProgress, newId } from "@/lib/calendar/kanban";
-import { courseTone } from "@/lib/calendar/colors";
+import { courseTone } from "@/types/calendar";
 import { CloseIcon, PlusIcon } from "@/components/shell/icons";
 import { PRIORITY_STYLES } from "./PriorityTag";
 
@@ -204,7 +204,7 @@ export function CardEditor({
           <div className="flex gap-2">
             <button
               onClick={() => onDelete(event.id)}
-              className="rounded-md bg-error px-3 py-1.5 text-sm font-medium text-white hover:bg-error/90"
+              className="rounded-md bg-error px-3 py-1.5 text-sm font-medium text-on-primary hover:bg-error/90"
             >
               Delete
             </button>

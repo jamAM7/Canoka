@@ -19,6 +19,17 @@ export function refuseUnlessLocal(request: Request): NextResponse | null {
   return null;
 }
 
+/**
+ * Same-origin check only, with no NODE_ENV block, for routes that work when
+ * deployed. A response refusing the request, or null to go ahead.
+ */
+export function requireSameOrigin(request: Request): NextResponse | null {
+  if (request.method !== "GET" && !sameOrigin(request)) {
+    return NextResponse.json({ error: "Requests must come from this app." }, { status: 403 });
+  }
+  return null;
+}
+
 function sameOrigin(request: Request): boolean {
   try {
     return new URL(request.headers.get("origin") ?? "").host === request.headers.get("host");
