@@ -65,8 +65,8 @@ export function CalendarToolbar(props: Props) {
   }, [filtersOpen]);
 
   return (
-    <header className="relative z-0 flex flex-col gap-3 border-b border-border bg-background px-8 py-5 md:px-10">
-      <div className="relative z-0 flex min-h-10 items-center justify-center">
+    <header className="relative z-0 flex min-h-[182px] flex-col border-b border-border bg-background px-8 py-4 md:px-10">
+      <div className="relative z-0 flex h-[78px] items-center justify-center">
         {props.showNav && (
           <div className="absolute left-0 flex items-center gap-1">
             <button
@@ -92,13 +92,13 @@ export function CalendarToolbar(props: Props) {
           </div>
         )}
 
-        <div className="text-center">
-          <div className="text-3xl font-semibold tracking-tight text-text md:text-4xl">
+        <div className="flex min-w-0 flex-col items-center justify-center text-center">
+          <div className="text-3xl font-semibold leading-none tracking-tight text-text md:text-4xl">
             {props.period.title}
           </div>
-          {props.period.subtitle && (
-            <div className="text-sm text-text-muted">{props.period.subtitle}</div>
-          )}
+          <div className="mt-1 flex min-h-[1.25rem] items-center justify-center text-sm text-text-muted">
+            {props.period.subtitle ?? "\u00A0"}
+          </div>
         </div>
 
         <div className="absolute right-0 flex items-center gap-1" role="group" aria-label="Calendar view">
@@ -123,7 +123,7 @@ export function CalendarToolbar(props: Props) {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex min-h-[56px] flex-wrap items-start justify-between gap-3 pt-1">
         <div className="flex flex-wrap items-center gap-2">
           {SOURCES.map((s) => {
             const active = !props.hiddenTypes.has(s.type);

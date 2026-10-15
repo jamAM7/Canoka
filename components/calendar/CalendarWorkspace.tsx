@@ -202,7 +202,7 @@ export function CalendarWorkspace({ events: initialEvents, courses, notice }: Pr
       return { title: format(anchor, "MMMM"), subtitle: format(anchor, "yyyy") };
     }
     if (view === "kanban") {
-      return { title: "Kanban Board" };
+      return { title: "Kanban Board", subtitle: "" };
     }
     const s = startOfWeek(anchor, WEEK_OPTS);
     const e = endOfWeek(anchor, WEEK_OPTS);
