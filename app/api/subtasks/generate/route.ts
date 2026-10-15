@@ -25,9 +25,9 @@
 //     It takes a while (one Claude call per assessment, three at a time): expect a minute or two for ten.
 //     Errors are { error: string }: 400 bad body, 404 not the student's assessment, 409 already
 //     running, 500. Claude failing for one assessment is a `failed` entry, not an error.
-//     It calls the Anthropic API with the key on this machine, so lib/guard limits it to local development.
+//     It calls the Anthropic API with the server-side key. lib/guard only checks the request came from this app.
 import { NextResponse } from "next/server";
-import { refuseUnlessLocal } from "@/lib/guard";
+import { requireSameOrigin } from "@/lib/guard";
 import { currentUser } from "@/lib/data/user";
 import { failure, optionalJson } from "@/lib/data/http";
 import { generateSubtasks, parseGenerateInput } from "@/lib/data/subtasks";
@@ -35,7 +35,7 @@ import { generateSubtasks, parseGenerateInput } from "@/lib/data/subtasks";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const refused = refuseUnlessLocal(request);
+  const refused = requireSameOrigin(request);
   if (refused) return refused;
 
   try {
