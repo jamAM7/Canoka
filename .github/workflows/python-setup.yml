@@ -71,9 +71,14 @@ jobs:
       - name: Scraper self-test
         working-directory: scraper
         run: '"$VENV_PYTHON" selftest.py'
+      # The hook also checks the app's settings (scripts/check-env.mjs), so it gets
+      # placeholders, as in ci.yml. Nothing here connects to a database.
       - name: The npm run dev hook has nothing left to do
         run: |
           npm run predev 2>&1 | tee hook.log
           ! grep -E "Installing|Creating|wouldn't" hook.log
         env:
           CI: ""
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_placeholder
+          SUPABASE_SERVICE_ROLE_KEY: sb_secret_placeholder
