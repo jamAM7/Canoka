@@ -6,7 +6,6 @@ import {
   addWeeks,
   endOfWeek,
   format,
-  getWeek,
   startOfWeek,
 } from "date-fns";
 import type {
@@ -30,6 +29,7 @@ import {
   setColumnStatus,
 } from "@/lib/calendar/kanban";
 import { loadCalendar, saveCalendar } from "@/lib/calendar/storage";
+import { teachingWeek } from "@/lib/calendar/teaching-weeks";
 import { NavBar } from "@/components/shell/NavBar";
 import { CalendarToolbar } from "./CalendarToolbar";
 import { WeekView } from "./WeekView";
@@ -221,11 +221,12 @@ export function CalendarWorkspace({ events: initialEvents, courses, notice }: Pr
     }
     const s = startOfWeek(anchor, WEEK_OPTS);
     const e = endOfWeek(anchor, WEEK_OPTS);
-    const sameMonth = s.getMonth() === e.getMonth();
-    const range = sameMonth
-      ? `${format(s, "MMM d")} – ${format(e, "d, yyyy")}`
-      : `${format(s, "MMM d")} – ${format(e, "MMM d, yyyy")}`;
-    return { title: `Week ${getWeek(anchor, WEEK_OPTS)}`, subtitle: range };
+    const range = s.getMonth() === e.getMonth() ? `${format(s, "MMM d")} – ${format(e, "d")}` : `${format(s, "MMM d")} – ${format(e, "MMM d")}`;
+    // The week of semester; between sessions, just the dates.
+    const week = teachingWeek(format(s, "yyyy-MM-dd"));
+    if (week) return { title: week.label, subtitle: `${week.session} · ${range}` };
+    const years = s.getFullYear() === e.getFullYear() ? format(e, "yyyy") : `${format(s, "yyyy")}–${format(e, "yyyy")}`;
+    return { title: range, subtitle: years };
   }, [view, anchor]);
 
   return (

@@ -1,13 +1,12 @@
 import "server-only";
 import { planSubtasks, type SubtaskContext } from "@/lib/ai/subtasks";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import type { AssignmentRow, CourseContentRow, CourseRow, StudyPlanRow, StudyPreferencesRow, StudyTaskRow } from "@/lib/supabase/types";
+import type { AssignmentRow, CourseContentRow, CourseRow, StudyPlanRow, StudyTaskRow } from "@/lib/supabase/types";
 import { skipReason } from "@/lib/subtasks/eligibility";
 import { newPlanRow, taskRows } from "@/lib/subtasks/rows";
 import {
   daysBetween,
   localDate,
-  prefsFromRow,
   scheduleSubtasks,
   type Busy,
   type PlannedSubtask,
@@ -16,6 +15,7 @@ import {
 import type { CreatedItem, FailedItem, GenerateResult, SkippedItem } from "@/lib/subtasks/types";
 import { dbError } from "./db-error";
 import { NotesError, isUuid } from "./notes";
+import { studyPrefs } from "./study-preferences";
 import { getTimetableEvents } from "./timetable";
 import type { CurrentUser } from "./user";
 
@@ -117,7 +117,7 @@ async function generate(user: CurrentUser, input: GenerateInput): Promise<Genera
   result.remaining = eligible.length - batch.length;
   if (batch.length === 0) return result;
 
-  const prefs = await loadPrefs(user.id);
+  const prefs = await studyPrefs(user.id);
   const today = localDate(now.getTime(), user.timezone);
 
   // Plans first, one at a time: two assessments of one subject would race to create its plan.
@@ -414,16 +414,6 @@ async function busyTimes(user: CurrentUser, now: Date, replacing: Set<string>): 
   }
   for (const ev of timetable.events) add(ev.start, ev.end, false);
   return busy;
-}
-
-async function loadPrefs(userId: string): Promise<StudyPrefs> {
-  const { data, error } = await supabaseAdmin()
-    .from("study_preferences")
-    .select("preferred_session_minutes, max_daily_minutes, preferred_start_time, preferred_end_time, study_days")
-    .eq("user_id", userId)
-    .overrideTypes<Pick<StudyPreferencesRow, "preferred_session_minutes" | "max_daily_minutes" | "preferred_start_time" | "preferred_end_time" | "study_days">[], { merge: false }>();
-  if (error) throw dbError("Couldn't load your study preferences", error);
-  return prefsFromRow(data[0] ?? null);
 }
 
 // ---------------------------------------------------------------- writing

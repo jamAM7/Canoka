@@ -6,7 +6,8 @@
 // deadline it should be finished. Everything about *when* is decided here:
 //
 //   - a study window each day (18:00-21:00 by default, at most 180 minutes),
-//     from the student's study_preferences if they have a row;
+//     from the student's study_preferences if they have a row (Settings ›
+//     Study hours, lib/data/study-preferences);
 //   - around what's already on the calendar (`busy`: other assessments'
 //     subtasks, classes), with a break either side of every session, and the
 //     day's study already planned counted against the daily limit;
