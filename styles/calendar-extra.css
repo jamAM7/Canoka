@@ -556,7 +556,7 @@
 .event-detail-scrim {
     position: fixed;
     inset: 0;
-    z-index: 30;
+    z-index: 90;
     background: rgb(var(--rgb-shadow) / 0.28);
     transition: opacity var(--transition-normal);
 }
@@ -570,7 +570,7 @@
     position: fixed;
     top: 0;
     right: 0;
-    z-index: 40;
+    z-index: 100;
     display: flex;
     flex-direction: column;
     width: 100%;

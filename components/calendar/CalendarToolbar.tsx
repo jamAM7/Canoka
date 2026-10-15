@@ -1,16 +1,10 @@
 "use client";
 
-import { useState } from "react";
-<<<<<<< HEAD
-import type { CalendarEventType, Course } from "@/types/calendar";
-import { courseTone } from "@/types/calendar";
-import { ChevronIcon } from "@/components/shell/icons";
-=======
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type { CalendarEventType, CalendarViewMode, Course } from "@/types/calendar";
-import { courseTone } from "@/lib/calendar/colors";
+import { courseTone } from "@/types/calendar";
 import { ChevronIcon, KanbanIcon, MonthViewIcon, WeekViewIcon } from "@/components/shell/icons";
->>>>>>> origin/main
 import { GenerateSubtasksButton } from "./GenerateSubtasksButton";
 
 interface Props {
@@ -47,10 +41,32 @@ const VIEWS: { key: CalendarViewMode; label: string; icon: ReactNode }[] = [
 
 export function CalendarToolbar(props: Props) {
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const coursesButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!filtersOpen || !coursesButtonRef.current) return;
+
+    const updatePosition = () => {
+      const rect = coursesButtonRef.current!.getBoundingClientRect();
+      setMenuPosition({
+        top: rect.bottom + 8,
+        left: Math.max(12, Math.min(rect.right - 256, window.innerWidth - 272)),
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [filtersOpen]);
 
   return (
-    <header className="flex flex-col gap-3 border-b border-border bg-background px-8 py-5 md:px-10">
-      <div className="relative flex min-h-10 items-center justify-center">
+    <header className="relative z-0 flex flex-col gap-3 border-b border-border bg-background px-8 py-5 md:px-10">
+      <div className="relative z-0 flex min-h-10 items-center justify-center">
         {props.showNav && (
           <div className="absolute left-0 flex items-center gap-1">
             <button
@@ -77,7 +93,9 @@ export function CalendarToolbar(props: Props) {
         )}
 
         <div className="text-center">
-          <div className="text-xl font-semibold text-text">{props.period.title}</div>
+          <div className="text-3xl font-semibold tracking-tight text-text md:text-4xl">
+            {props.period.title}
+          </div>
           {props.period.subtitle && (
             <div className="text-sm text-text-muted">{props.period.subtitle}</div>
           )}
@@ -135,48 +153,53 @@ export function CalendarToolbar(props: Props) {
         </div>
 
         <div className="flex flex-wrap items-start gap-3">
-        <GenerateSubtasksButton />
-        <div className="relative">
-          <button
-            onClick={() => setFiltersOpen((o) => !o)}
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text transition-colors hover:border-primary-light hover:bg-surface-muted"
-          >
-            Courses
-            {props.hiddenCourses.size > 0 && (
-              <span className="inline-flex min-h-[18px] items-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-on-primary">
-                {props.courses.length - props.hiddenCourses.size}/{props.courses.length}
-              </span>
-            )}
-          </button>
-
-          {filtersOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setFiltersOpen(false)} />
-              <div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-border bg-surface p-2 shadow-md">
-                {props.courses.map((c) => (
-                  <label
-                    key={c.id}
-                    className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm text-text transition-colors hover:bg-surface-muted"
-                  >
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 accent-primary"
-                      checked={!props.hiddenCourses.has(c.id)}
-                      onChange={() => props.onToggleCourse(c.id)}
-                    />
-                    <span
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ background: courseTone(c.color).solid }}
-                    />
-                    <span>{c.code}</span>
-                  </label>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+          <GenerateSubtasksButton />
+          <div className="relative">
+            <button
+              ref={coursesButtonRef}
+              onClick={() => setFiltersOpen((o) => !o)}
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text transition-colors hover:border-primary-light hover:bg-surface-muted"
+            >
+              Courses
+              {props.hiddenCourses.size > 0 && (
+                <span className="inline-flex min-h-[18px] items-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-on-primary">
+                  {props.courses.length - props.hiddenCourses.size}/{props.courses.length}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </div>
+
+      {filtersOpen && menuPosition && typeof document !== "undefined" && createPortal(
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setFiltersOpen(false)} />
+          <div
+            className="fixed z-50 w-64 rounded-xl border border-border bg-surface p-2 shadow-md"
+            style={{ top: menuPosition.top, left: menuPosition.left }}
+          >
+            {props.courses.map((c) => (
+              <label
+                key={c.id}
+                className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm text-text transition-colors hover:bg-surface-muted"
+              >
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-primary"
+                  checked={!props.hiddenCourses.has(c.id)}
+                  onChange={() => props.onToggleCourse(c.id)}
+                />
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ background: courseTone(c.color).solid }}
+                />
+                <span>{c.code}</span>
+              </label>
+            ))}
+          </div>
+        </>,
+        document.body,
+      )}
     </header>
   );
 }

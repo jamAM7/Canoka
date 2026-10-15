@@ -17,75 +17,13 @@ const config: Config = {
   
   theme: {
     extend: {
-<<<<<<< HEAD
-      // Color palette (semantic + brand). Prefer semantic names in components (primary, surface, border) so tokens can swap easily.
-      colors: {
-        primary: "#023047",
-        "primary-light": "#8ECAE6",
-        "primary-dark": "#012536",
-        secondary: "#FFB703",
-        "secondary-dark": "#FB8500",
-        accent: "#E26D5C",
-        "accent-muted": "#C9CBA3",
-        success: "#5F8A62",
-        warning: "#FFB703",
-        error: "#C94C4C",
-        info: "#8ECAE6",
-        text: "#0C0C20",
-        "text-muted": "#62626D",
-        "text-light": "#8A8A92",
-        background: "#F6FAF9",
-        surface: "#FFFFFF",
-        "surface-muted": "#EEF3F3",
-        border: "#D9DFDF",
-        "border-light": "#E8ECEC",
-        white: "#FFFFFF",
-        black: "#0C0C20",
-        brand: "#023047",
-        brandSoft: "#8ECAE6",
-        brandDeep: "#012536",
-        shell: "#F6FAF9",
-        panel: "#FFFFFF",
-        panelMuted: "#EEF3F3",
-        ink: "#0C0C20",
-        inkMuted: "#62626D",
-        inkLight: "#8A8A92",
-        line: "#D9DFDF",
-        lineSoft: "#E8ECEC",
-
-        // Course / assessment colours. These match the calendar palette so the
-        // same semantic colours can be reused across cards, pills, and week view
-        // event blocks without hard-coding values in separate component files.
-        course: {
-          blue: "#8ECAE6",
-          "blue-soft": "rgba(142, 202, 230, 0.52)",
-          "blue-border": "rgba(142, 202, 230, 0.8)",
-          violet: "#E26D5C",
-          "violet-soft": "rgba(226, 109, 92, 0.28)",
-          "violet-border": "rgba(226, 109, 92, 0.72)",
-          emerald: "#5F8A62",
-          "emerald-soft": "rgba(95, 138, 98, 0.28)",
-          "emerald-border": "rgba(95, 138, 98, 0.72)",
-          amber: "#FFB703",
-          "amber-soft": "rgba(255, 183, 3, 0.34)",
-          "amber-border": "rgba(255, 183, 3, 0.75)",
-          rose: "#C94C4C",
-          "rose-soft": "rgba(201, 76, 76, 0.28)",
-          "rose-border": "rgba(201, 76, 76, 0.72)",
-          cyan: "#C9CBA3",
-          "cyan-soft": "rgba(201, 203, 163, 0.52)",
-          "cyan-border": "rgba(201, 203, 163, 0.9)",
-        },
-=======
-      // Color palette (semantic + brand). Prefer semantic names in
-      // components (primary, surface, border) so tokens can swap easily.
-      // Values live in styles/variables.css, which switches them for dark
-      // mode and high contrast; `token()` keeps opacity modifiers working.
+      // Color palette (semantic + brand). Prefer semantic names in components
+      // (primary, surface, border) so tokens can swap easily. Values live in
+      // styles/variables.css; `token()` keeps opacity modifiers working.
       colors: {
         primary: token("primary"),
         "primary-light": token("primary-light"),
         "primary-dark": token("primary-dark"),
-        // Text and icons on bg-primary or bg-error.
         "on-primary": token("on-primary"),
         secondary: token("secondary"),
         "secondary-dark": token("secondary-dark"),
@@ -103,8 +41,6 @@ const config: Config = {
         "surface-muted": token("surface-muted"),
         border: token("border"),
         "border-light": token("border-light"),
-        // Calendar grid lines (week hours/days, month cells): darker than
-        // `border` so the grid stays readable on the `background` colour.
         "border-strong": token("border-strong"),
         white: token("white"),
         black: token("black"),
@@ -119,7 +55,30 @@ const config: Config = {
         inkLight: token("text-light"),
         line: token("border"),
         lineSoft: token("border-light"),
->>>>>>> origin/main
+
+        // Course / assessment colours. These match the shared calendar palette so
+        // cards, pills, and event blocks reuse the same token family without a
+        // duplicate file of hard-coded values.
+        course: {
+          blue: "var(--color-course-blue)",
+          "blue-soft": "var(--color-course-blue-soft)",
+          "blue-border": "var(--color-course-blue-border)",
+          violet: "var(--color-course-violet)",
+          "violet-soft": "var(--color-course-violet-soft)",
+          "violet-border": "var(--color-course-violet-border)",
+          emerald: "var(--color-course-emerald)",
+          "emerald-soft": "var(--color-course-emerald-soft)",
+          "emerald-border": "var(--color-course-emerald-border)",
+          amber: "var(--color-course-amber)",
+          "amber-soft": "var(--color-course-amber-soft)",
+          "amber-border": "var(--color-course-amber-border)",
+          rose: "var(--color-course-rose)",
+          "rose-soft": "var(--color-course-rose-soft)",
+          "rose-border": "var(--color-course-rose-border)",
+          cyan: "var(--color-course-cyan)",
+          "cyan-soft": "var(--color-course-cyan-soft)",
+          "cyan-border": "var(--color-course-cyan-border)",
+        },
       },
       spacing: {
         // Common spacing scale used across layouts and components. 
@@ -139,19 +98,11 @@ const config: Config = {
         navbar: "72px",
       },
       fontFamily: {
-<<<<<<< HEAD
-        // We use the Karla variable injected by next/font. 
-        // Keep only Karla + a generic fallback to avoid unexpected font swaps.
-        sans: ["var(--font-karla)", "Karla", "sans-serif"],
-        body: ["var(--font-karla)", "Karla", "sans-serif"],
-        heading: ["var(--font-karla)", "Karla", "sans-serif"],
-=======
-        // Fonts injected by next/font: Poppins for body text, Sintony
-        // for headings (h1–h6 pick it up from styles.css).
+        // Fonts injected by next/font: Poppins for body text, Sintony for
+        // headings (h1–h6 pick it up from styles.css).
         sans: ["var(--font-poppins)", "Poppins", "sans-serif"],
         body: ["var(--font-poppins)", "Poppins", "sans-serif"],
         heading: ["var(--font-sintony)", "Sintony", "sans-serif"],
->>>>>>> origin/main
       },
       fontSize: {
         // Font-size scale (value + line-height). Use `text-sm`, `text-lg` etc.

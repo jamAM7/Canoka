@@ -1,18 +1,9 @@
 import Link from "next/link";
 import { endOfWeek, format, isPast, isWithinInterval, startOfWeek } from "date-fns";
-import type { CalendarEvent, Course } from "@/types/calendar";
-import { WEEK_OPTS, relativeDueLabel } from "@/lib/calendar/event-utils";
-<<<<<<< HEAD
-import { courseTone } from "@/types/calendar";
-import { CURRENT_USER, getGreeting } from "@/lib/user/mock-user";
-=======
-import { courseTone } from "@/lib/calendar/colors";
-<<<<<<< HEAD
-import { getGreeting } from "@/lib/user/mock-user";
->>>>>>> origin/main
-=======
 import { ClockIcon } from "@/components/shell/icons";
->>>>>>> origin/main
+import type { CalendarEvent, Course } from "@/types/calendar";
+import { courseTone } from "@/types/calendar";
+import { WEEK_OPTS, relativeDueLabel } from "@/lib/calendar/event-utils";
 
 interface Props {
   events: CalendarEvent[];

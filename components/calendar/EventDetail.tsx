@@ -2,15 +2,11 @@
 
 import { useEffect } from "react";
 import { format } from "date-fns";
+import { CloseIcon } from "@/components/shell/icons";
 import type { CalendarEvent, Course } from "@/types/calendar";
+import { courseTone } from "@/types/calendar";
 import { formatEventTime, isScheduled, typeLabel, type ScheduledEvent } from "@/lib/calendar/event-utils";
 import { isBoardCard } from "@/lib/calendar/kanban";
-<<<<<<< HEAD
-import { courseTone } from "@/types/calendar";
-=======
-import { courseTone } from "@/lib/calendar/colors";
-import { CloseIcon } from "@/components/shell/icons";
->>>>>>> origin/main
 import { CardEditor, type CardEditorProps } from "./CardEditor";
 
 type Props = Omit<CardEditorProps, "event" | "layout"> & {

@@ -58,7 +58,9 @@
     --rgb-border-strong: 203 211 211;    /* #CBD3D3 */
     --rgb-border-dark: 175 175 175;      /* #AFAFAF */
 
-<<<<<<< HEAD
+    --rgb-white: 255 255 255;
+    --rgb-black: 12 12 32;
+
     --color-course-blue: #8ECAE6;
     --color-course-blue-soft: rgba(142, 202, 230, 0.52);
     --color-course-blue-border: rgba(142, 202, 230, 0.8);
@@ -78,13 +80,6 @@
     --color-course-cyan-soft: rgba(201, 203, 163, 0.52);
     --color-course-cyan-border: rgba(201, 203, 163, 0.9);
 
-    --color-white: #FFFFFF;
-    --color-black: #0C0C20;
-=======
-    --rgb-white: 255 255 255;
-    --rgb-black: 12 12 32;
-
-    /* Course colours' text on their tinted event blocks (lib/calendar/colors.ts). */
     --course-violet-fg: #8A3327;
     --course-amber-fg: #805A00;
     --course-cyan-fg: #5B5D3F;
@@ -128,7 +123,6 @@
 
     /* Native controls (scrollbars, date pickers) follow the theme. */
     color-scheme: light;
->>>>>>> origin/main
 
 
     /* ---------------------------------------------------------
