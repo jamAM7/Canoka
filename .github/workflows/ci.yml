@@ -1,0 +1,32 @@
+# Type-checks and builds the app the way Netlify does, on every pull request
+# and on main, so a change that would break the site fails here before it's
+# merged. The Supabase settings are placeholders: the build needs them set
+# (scripts/check-env.mjs), but never connects to a database.
+
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Type-check and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SKIP_PYTHON_SETUP: "1"
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_placeholder
+      SUPABASE_SERVICE_ROLE_KEY: sb_secret_placeholder
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run build

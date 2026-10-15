@@ -149,6 +149,28 @@ The token is stored as-is in a table with row level security on and no
 policies, so only the app's server code can read it. Anyone with access to the
 Supabase dashboard can still see it.
 
+## Environments
+
+Every copy of the app (your machine, a teammate's, Netlify's deploy previews and
+the live site) runs the same code against the one Supabase project. What
+differs is only its settings, and three checks keep those right:
+
+| Check | When | What it catches |
+|---|---|---|
+| `scripts/check-env.mjs` | Before every `npm run dev` and `npm run build`, Netlify's included. `npm run check:env` by hand | A missing setting, or a key in the wrong place, such as the secret key in a `NEXT_PUBLIC_` setting, which would go to every browser. The command stops and names the setting |
+| `/api/health` | Open it on any copy, e.g. `http://localhost:3000/api/health` or `https://canoka.netlify.app/api/health` | Whether the database is reachable, sign-in is built in, AI is on, and which migrations haven't been applied. It shows no keys and no student data |
+| The Build workflow | Every pull request, and every push to main | A change that doesn't type-check or build, before it's merged |
+
+- **A new machine:** install Node (the version in `.nvmrc`), run `npm install`,
+  copy `.env.example` to `.env.local` and fill it in (the keys are in Supabase
+  → Project Settings → API Keys), then run `npm run dev` and sign up.
+- **After pulling main:** run `npm install`. If someone added a migration,
+  `/api/health` names it; run it once in the Supabase SQL editor, for everyone.
+- **Netlify:** the same settings, under Site configuration → Environment
+  variables, for all deploy contexts. `NEXT_PUBLIC_` ones are built into the
+  pages, so redeploy after changing them. Every pull request gets its own
+  deploy preview to try before merging.
+
 ## Canvas scraper
 
 Pulls a student's Canvas subjects into a local corpus: one JSON document per
