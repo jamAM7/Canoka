@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -29,9 +30,15 @@ const supportStyles = [
 
 function Logo() {
   return (
-    <div className={styles.logo} aria-label="Canoka">
-      <span className={styles.logoPlaceholder} aria-hidden="true">Logo</span>
-      <span>Canoka</span>
+    <div className={styles.logo}>
+      <Image
+        src="/canoka-logo.png"
+        alt="Canoka"
+        width={1240}
+        height={1269}
+        priority
+        className={styles.logoImage}
+      />
     </div>
   );
 }

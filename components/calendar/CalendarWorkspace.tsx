@@ -61,10 +61,19 @@ export function CalendarWorkspace({ events: initialEvents, courses, notice }: Pr
   // restored.
   const [restored, setRestored] = useState(false);
   const skipNextSave = useRef(true);
+  const restoring = useRef(false);
 
   useEffect(() => {
+    // A server refresh changes initialEvents before the async saved-state load
+    // finishes. Block the save effect during that window, otherwise it compares
+    // the old client list with the new server list and records every newly
+    // generated subtask as "removed".
+    restoring.current = true;
+    skipNextSave.current = true;
+    let cancelled = false;
     void (async () => {
       const saved = await loadCalendar(initialEvents);
+      if (cancelled) return;
       if (saved) {
         setEvents(saved.events);
         setBoard(saved.board);
@@ -72,12 +81,16 @@ export function CalendarWorkspace({ events: initialEvents, courses, notice }: Pr
         // Nothing saved for this student: include events that arrive after a refresh.
         setEvents(initialEvents);
       }
+      restoring.current = false;
       setRestored(true);
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [initialEvents]);
 
   useEffect(() => {
-    if (!restored) return;
+    if (!restored || restoring.current) return;
     if (skipNextSave.current) {
       skipNextSave.current = false;
       return;

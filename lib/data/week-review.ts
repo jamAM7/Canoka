@@ -1,8 +1,8 @@
 import "server-only";
 import { reviewNotes, type NotesReview } from "@/lib/ai/review";
-import { COVERAGE_PREFIX, weekItems, weekRows } from "@/lib/canvas/week";
+import { weekItems, weekRows } from "@/lib/canvas/week";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import type { CourseContentRow, CourseRow, NoteRow, WeekReviewRow } from "@/lib/supabase/types";
+import type { CourseRow, NoteRow, WeekReviewRow } from "@/lib/supabase/types";
 import { docText } from "@/lib/notes/text";
 import type { WeekReviewDto } from "@/lib/notes/types";
 import type { LearningProfile } from "@/lib/user/learning-profile";
@@ -11,7 +11,7 @@ import { registerFiles, storedFiles } from "./canvas-files";
 import { dbError } from "./db-error";
 import { NotesError, isUuid } from "./notes";
 import type { CurrentUser } from "./user";
-import { saveWeekContent } from "./week-content";
+import { saveWeekContent, storedWeekContent } from "./week-content";
 import { weekModuleIds, weekModules } from "./week-modules";
 
 // The AI review of a student's notes for one week of a subject.
@@ -31,9 +31,6 @@ import { weekModuleIds, weekModules } from "./week-modules";
 const MAX_WEEK = 20;
 const MAX_NOTES = 50;
 const MAX_NOTE_CHARS = 200_000;
-/** Characters of course content sent: well under the model's limit, past any real week. */
-const MAX_CONTENT_CHARS = 150_000;
-
 const REVIEW_COLUMNS =
   "id, user_id, course_id, module_id, content, model_name, note_count, had_course_content, content_stale, content_updated_at, created_at";
 type CourseFields = Pick<CourseRow, "id" | "external_course_id" | "course_code" | "name">;
@@ -75,7 +72,7 @@ export function parseReviewInput(body: unknown): ReviewInput {
   };
 }
 
-function parseLearningProfile(value: unknown): LearningProfile | null {
+export function parseLearningProfile(value: unknown): LearningProfile | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const profile = value as Record<string, unknown>;
   const oneOf = (candidate: unknown, allowed: string[]) =>
@@ -131,7 +128,7 @@ export async function reviewWeek(user: Pick<CurrentUser, "id" | "timezone">, inp
     }
 
     // Step 3.
-    const content = await storedContent(courseId, moduleIds);
+    const content = await storedWeekContent(courseId, moduleIds);
 
     // Step 4.
     const { review, model } = await reviewNotes({
@@ -207,35 +204,6 @@ async function weekNotes(userId: string, courseId: string, moduleIds: string[]):
     .map((n) => ({ title: n.title, content: (n.plain_text ?? docText(n.content)).slice(0, MAX_NOTE_CHARS) }))
     .filter((n) => n.content.trim() !== "")
     .slice(0, MAX_NOTES);
-}
-
-/**
- * The week's course_content as one markdown string (null if there's none worth
- * reading), and when it was last saved. The coverage note rides along but
- * doesn't count as content: a week with only that has nothing to check against.
- */
-async function storedContent(courseId: string, moduleIds: string[]): Promise<{ markdown: string | null; updatedAt: string | null }> {
-  const { data, error } = await supabaseAdmin()
-    .from("course_content")
-    .select("external_content_id, body_text, position, updated_at")
-    .eq("course_id", courseId)
-    .in("module_id", moduleIds)
-    .order("position", { ascending: true, nullsFirst: false })
-    .overrideTypes<Pick<CourseContentRow, "external_content_id" | "body_text" | "position" | "updated_at">[], { merge: false }>();
-  if (error) throw dbError("Couldn't load the week's content", error);
-
-  const updatedAt = data.reduce<string | null>(
-    (latest, row) => (latest === null || Date.parse(row.updated_at) > Date.parse(latest) ? row.updated_at : latest),
-    null,
-  );
-  const withText = data.filter((row) => row.body_text?.trim());
-  if (!withText.some((row) => !row.external_content_id.startsWith(COVERAGE_PREFIX))) return { markdown: null, updatedAt };
-
-  let markdown = withText.map((row) => (row.body_text as string).trim()).join("\n\n");
-  if (markdown.length > MAX_CONTENT_CHARS) {
-    markdown = `${markdown.slice(0, MAX_CONTENT_CHARS)}\n\n_The rest of this week's content was cut off to fit._`;
-  }
-  return { markdown, updatedAt };
 }
 
 async function saveReview(

@@ -945,12 +945,24 @@ h6 {
 .note-item-title {
     margin-bottom: var(--space-1);
     font-weight: var(--font-weight-semibold);
+
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
 }
 
 .note-item-preview {
     margin: 0;
     color: var(--color-text-muted);
     font-size: var(--font-size-sm);
+
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
 }
 
 .note-editor {

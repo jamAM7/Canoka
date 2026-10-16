@@ -27,6 +27,8 @@ interface SavedChanges {
   removed: string[];
   added: CalendarEvent[];
   board: KanbanBoard;
+  /** Server events that existed when `removed` was calculated. */
+  baseIds?: string[];
 }
 
 /** `base` is the event list the page was rendered with. */
@@ -112,6 +114,7 @@ function migrateOldCopy(): SavedChanges | null {
     removed: [],
     added: data.events.filter((ev: { id?: unknown }) => String(ev?.id).startsWith("task-")),
     board: data.board,
+    baseIds: [],
   };
   window.localStorage.setItem(KEY, JSON.stringify(changes));
   window.localStorage.removeItem(OLD_KEY);
@@ -145,13 +148,18 @@ function diff(base: CalendarEvent[], state: CalendarState): SavedChanges {
     removed: base.filter((ev) => !kept.has(ev.id)).map((ev) => ev.id),
     added,
     board: state.board,
+    baseIds: base.map((ev) => ev.id),
   };
 }
 
 function applyChanges(base: CalendarEvent[], changes: SavedChanges): CalendarState {
   const removed = new Set(changes.removed);
+  // Older saved states don't identify which server snapshot their removals
+  // belong to. Ignoring those legacy removals once repairs events that the old
+  // refresh race accidentally hid, while new explicit removals still persist.
+  const knownWhenRemoved = new Set(changes.baseIds ?? []);
   const events = base
-    .filter((ev) => !removed.has(ev.id))
+    .filter((ev) => !(removed.has(ev.id) && knownWhenRemoved.has(ev.id)))
     .map((ev) => {
       const patch = changes.edited[ev.id];
       if (!patch) return ev;
@@ -173,6 +181,7 @@ function isChanges(value: unknown): value is SavedChanges {
     data.edited !== null &&
     Array.isArray(data.removed) &&
     Array.isArray(data.added) &&
+    (data.baseIds === undefined || Array.isArray(data.baseIds)) &&
     isBoard(data.board)
   );
 }

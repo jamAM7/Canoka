@@ -148,6 +148,6 @@ export function describe(error: unknown, key: string | null): string {
   if (error instanceof Anthropic.RateLimitError) return "Anthropic is busy right now. Try again in a minute.";
   if (error instanceof Anthropic.APIConnectionError) return "Couldn't reach Anthropic. Check your connection.";
   if (error instanceof Anthropic.APIError) return `Anthropic returned an error (${error.status}): ${error.message}`;
-  if (!key) return "Add your Anthropic API key in Settings to use AI review.";
+  if (!key) return "Add your Anthropic API key in Settings to use AI features.";
   return error instanceof Error ? error.message : String(error);
 }

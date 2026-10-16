@@ -15,6 +15,23 @@ body {
   @apply bg-background text-text antialiased;
 }
 
+/*
+ * Chromium/Linux renders the popup for a native select on a white system
+ * surface even when the page uses color-scheme: dark. Without explicit option
+ * colours it inherits the theme's pale text, producing white-on-white menus.
+ * Keep the closed select theme-aware in component styles, but give every
+ * native popup a predictable high-contrast palette.
+ */
+:root[data-theme="dark"] select option,
+:root[data-theme="dark"] select optgroup {
+  background-color: #ffffff;
+  color: #0c0c20;
+}
+
+:root[data-theme="dark"] select option:disabled {
+  color: #62626d;
+}
+
 /* Thin scrollbars for the calendar scroll areas */
 .cb-scroll {
   scrollbar-width: thin;

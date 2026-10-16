@@ -95,6 +95,7 @@ export function NotesContent({ subjects, initialNotes }: Props) {
   const [closed, setClosed] = useState<Set<string>>(new Set());
   const [reviews, setReviews] = useState<Record<string, SavedReview>>({});
   const [reviewing, setReviewing] = useState<string | null>(null);
+  const [generating, setGenerating] = useState<string | null>(null);
   const [reviewError, setReviewError] = useState<{ key: string; message: string } | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -244,6 +245,42 @@ export function NotesContent({ subjects, initialNotes }: Props) {
     return true;
   };
 
+  const generateWeekNotes = async (subjectId: string, week: number) => {
+    const key = weekKey(subjectId, week);
+    setGenerating(key);
+    setSaveError(null);
+    setReviewError(null);
+    try {
+      const res = await fetch("/api/notes/generate", {
+        method: "POST",
+        headers: JSON_HEADERS,
+        body: JSON.stringify({
+          courseId: subjectId,
+          week,
+          learningProfile: await loadLearningProfile().catch(() => null),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSaveError(data.error ?? "The AI couldn't generate notes for this week.");
+        return;
+      }
+      const note: Note = data.note;
+      setNotes((prev) => [note, ...prev]);
+      setClosed((prev) => {
+        const next = new Set(prev);
+        next.delete(subjectId);
+        next.delete(key);
+        return next;
+      });
+      setActiveId(note.id);
+    } catch {
+      setSaveError("Couldn't reach the app's server to generate notes.");
+    } finally {
+      setGenerating(null);
+    }
+  };
+
   const reviewWeek = async (subjectId: string, week: number) => {
     const key = reviewKey(subjectId, week);
     setReviewing(key);
@@ -331,15 +368,27 @@ export function NotesContent({ subjects, initialNotes }: Props) {
             </span>
           )}
           {week.number !== null && (
-            <button
-              type="button"
-              onClick={() => addNote(group.id, week.number as number)}
-              aria-label={`New note in ${label} of ${group.title}`}
-              title={`New note in ${label}`}
-              className={SMALL_ICON_BUTTON}
-            >
-              <PlusIcon />
-            </button>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={() => generateWeekNotes(group.id, week.number as number)}
+                disabled={generating !== null}
+                title={`Generate editable notes from ${label}'s synced Canvas content`}
+                className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-primary transition-colors hover:bg-surface-muted disabled:cursor-wait disabled:opacity-50"
+              >
+                <SparkleIcon />
+                {generating === key ? "Generating…" : "Generate notes"}
+              </button>
+              <button
+                type="button"
+                onClick={() => addNote(group.id, week.number as number)}
+                aria-label={`New note in ${label} of ${group.title}`}
+                title={`New blank note in ${label}`}
+                className={SMALL_ICON_BUTTON}
+              >
+                <PlusIcon />
+              </button>
+            </div>
           )}
         </div>
         {open && week.notes.map(noteButton)}
@@ -352,7 +401,7 @@ export function NotesContent({ subjects, initialNotes }: Props) {
       <header className="px-2 pt-2">
         <h1 className="text-3xl font-bold tracking-tight text-text md:text-4xl">Notes</h1>
         <p className="mt-1 text-sm text-text-muted">
-          AI-generated notes for each subject and week, built from your Canvas content.
+          Generate editable study notes from each week&apos;s synced Canvas content, or write your own and ask AI to review them.
         </p>
       </header>
 
@@ -450,19 +499,30 @@ export function NotesContent({ subjects, initialNotes }: Props) {
                     </select>
                   </div>
                   {activeWeek !== null && activeReviewKey && (
-                    <button
-                      type="button"
-                      onClick={() => reviewWeek(activeSubject.id, activeWeek)}
-                      disabled={reviewing !== null}
-                      className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text transition-colors hover:border-primary-light hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <SparkleIcon className="text-primary" />
-                      {reviewing === activeReviewKey
-                        ? "Reviewing…"
-                        : reviews[activeReviewKey]
-                          ? "Review again"
-                          : `Review week ${activeWeek} with AI`}
-                    </button>
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => generateWeekNotes(activeSubject.id, activeWeek)}
+                        disabled={generating !== null || reviewing !== null}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-primary bg-primary px-3 py-1.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-dark disabled:cursor-wait disabled:opacity-50"
+                      >
+                        <SparkleIcon />
+                        {generating === activeReviewKey ? "Generating notes…" : "Generate notes"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => reviewWeek(activeSubject.id, activeWeek)}
+                        disabled={reviewing !== null || generating !== null}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text transition-colors hover:border-primary-light hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <SparkleIcon className="text-primary" />
+                        {reviewing === activeReviewKey
+                          ? "Reviewing…"
+                          : reviews[activeReviewKey]
+                            ? "Review again"
+                            : `Review week ${activeWeek} with AI`}
+                      </button>
+                    </div>
                   )}
                 </div>
               )}

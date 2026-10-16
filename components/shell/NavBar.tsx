@@ -20,7 +20,7 @@ export function NavBar({ active }: Props) {
   return (
     <header className="relative z-0 flex shrink-0 items-center gap-10 px-8 py-4 md:px-10">
       <Link href="/dashboard" className="flex items-center">
-        <Image src="/canoka-logo.png" alt="Canoka" width={425} height={200} priority className="nav-logo h-8 w-auto" />
+        <Image src="/canoka-logo.png" alt="Canoka" width={1240} height={1269} priority className="nav-logo h-12 w-12 object-contain" />
       </Link>
 
       <nav className="flex items-center gap-7">
